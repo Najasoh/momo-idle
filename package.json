@@ -1,0 +1,30 @@
+{
+  "name": "guild-innkeeper",
+  "version": "1.0.0",
+  "description": "Reincarnated as a Guild Innkeeper",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "exe": "npx electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.innkeeper.game",
+    "productName": "Guild Innkeeper",
+    "directories": { "output": "dist" },
+    "files": [
+      "index.html",
+      "main.js",
+      "css/**/*",
+      "js/**/*",
+      "images/**/*",
+      "sounds/**/*"
+    ],
+    "win": {
+      "target": ["portable"]
+    }
+  }
+}

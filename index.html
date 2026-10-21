@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reincarnated as a Guild Innkeeper</title>
+  <link rel="stylesheet" href="css/game.css" />
+</head>
+<body>
+  <div id="app">Loading…</div>
+  <script src="js/config.js"></script>
+  <script src="js/data/mining.js"></script>
+  <script src="js/data/gems.js"></script>
+  <script src="js/data/smithing.js"></script>
+  <script src="js/data/anvil.js"></script>
+  <script src="js/data/fishing.js"></script>
+  <script src="js/data/cooking.js"></script>
+  <script src="js/data/crafting.js"></script>
+  <script src="js/data/fletching.js"></script>
+  <script src="js/data/combat.js"></script>
+  <script src="js/data/towns.js"></script>
+  <script src="js/systems/xp.js"></script>
+  <script src="js/systems/inventory.js"></script>
+  <script src="js/systems/equipment.js"></script>
+  <script src="js/systems/combat.js"></script>
+  <script src="js/systems/save.js"></script>
+  <script src="js/systems/exchange.js"></script>
+  <script src="js/systems/sound.js"></script>
+  <script src="js/professions/mining.js"></script>
+  <script src="js/professions/smithing.js"></script>
+  <script src="js/professions/anvil.js"></script>
+  <script src="js/professions/fishing.js"></script>
+  <script src="js/professions/cooking.js"></script>
+  <script src="js/professions/crafting.js"></script>
+  <script src="js/professions/fletching.js"></script>
+  <script src="js/professions/sailing.js"></script>
+  <script src="js/professions/woodcutting.js"></script>
+  <script src="js/professions/farming.js"></script>
+  <script src="js/professions/firemaking.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script>
+    if (!window.Idle || !Idle.ui) {
+      document.getElementById("app").textContent = "The game files did not load. Unzip the whole folder first, then open index.html from inside that folder. Do not open it from inside the zip window.";
+    } else {
+      Idle.ui.mount(document.getElementById("app"));
+    }
+  </script>
+</body>
+</html>
