@@ -184,12 +184,37 @@ Idle.systems.combat = {
       if (drop.chance && Math.random() >= drop.chance) return;
       give(drop.id, this.rollQty(drop));
     });
-    if (mob.gemChance && Math.random() < mob.gemChance) {
+    if (mob.id === "gardener" && Idle.state.questProgress && Idle.state.questProgress.pirates_treasure && !Idle.state.quests.pirates_treasure) {
+      if (Math.random() < 0.1) {
+        give("one_eyed_hectors_treasure", 1);
+        Idle.state.quests.pirates_treasure = true;
+        Idle.state.questPoints = (Idle.state.questPoints || 0) + 2;
+        Idle.state.questComplete = { name: "Pirate's Treasure", lines: ["2 Quest Points", "One-eyed Hector's treasure"] };
+      }
+    }
+    if (mob.id === "rat" && Idle.state.questProgress && Idle.state.questProgress.witchs_potion && !Idle.state.quests.witchs_potion) {
+      if (Math.random() < 0.5) give("rats_tail", 1);
+    }
+    if (Math.random() < (mob.gemChance || 0)) {
       const table = Idle.data.gemTable || [];
       const total = table.reduce((sum, gem) => sum + gem.weight, 0);
       let roll = Math.random() * total;
       const gem = table.find((entry) => { roll -= entry.weight; return roll <= 0; });
       if (gem && gem.id !== "nothing") give(gem.id, 1);
+    }
+    if (mob.runeTable) {
+      const table = Idle.data.runeTable || [];
+      const total = table.reduce((sum, r) => sum + r.weight, 0);
+      let roll = Math.random() * total;
+      const rune = table.find((entry) => { roll -= entry.weight; return roll <= 0; });
+      if (rune) give(rune.id, Math.floor(Math.random() * 8) + 1);
+    }
+    if (mob.coinTable) {
+      const table = Idle.data.coinTable || [];
+      const total = table.reduce((sum, c) => sum + c.weight, 0);
+      let roll = Math.random() * total;
+      const coins = table.find((entry) => { roll -= entry.weight; return roll <= 0; });
+      if (coins) give("coins", coins.qty);
     }
     if (mob.slayerXp) {
       const levels = Idle.systems.xp.grant(Idle.state.combatSkills.slayer, mob.slayerXp);

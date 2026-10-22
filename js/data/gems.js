@@ -3,7 +3,29 @@
 window.Idle = window.Idle || {};
 Idle.data = Idle.data || {};
 
-Idle.data.gemChance = 1 / 256;
+Idle.data.runeTable = [
+  { id: "air_rune", weight: 64 },
+  { id: "water_rune", weight: 32 },
+  { id: "earth_rune", weight: 32 },
+  { id: "fire_rune", weight: 32 },
+  { id: "mind_rune", weight: 16 },
+  { id: "body_rune", weight: 16 },
+  { id: "chaos_rune", weight: 8 },
+  { id: "nature_rune", weight: 4 },
+  { id: "law_rune", weight: 4 },
+  { id: "cosmic_rune", weight: 2 },
+  { id: "death_rune", weight: 2 },
+  { id: "blood_rune", weight: 1 },
+];
+
+Idle.data.coinTable = [
+  { qty: 3, weight: 64 },
+  { qty: 5, weight: 32 },
+  { qty: 10, weight: 16 },
+  { qty: 15, weight: 8 },
+  { qty: 25, weight: 4 },
+  { qty: 50, weight: 2 },
+];
 
 Idle.data.gemTable = [
   {

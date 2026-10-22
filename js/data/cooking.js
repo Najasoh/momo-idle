@@ -4,7 +4,7 @@ Idle.data = Idle.data || {};
 
 Idle.data.cookingItems = [
   { id: "cooked_meat", name: "Cooked meat", sell: 61, heal: 3, swatch: "#8a4b32" },
-  { id: "burnt_meat", name: "Burnt meat", sell: 0, swatch: "#3a3532" },
+  { id: "burnt_meat", name: "Burnt meat", sell: 1, swatch: "#3a3532" },
   { id: "cooked_shrimp", name: "Cooked shrimp", sell: 30, heal: 3, swatch: "#d07a62" },
   { id: "burnt_shrimp", name: "Burnt shrimp", sell: 0, swatch: "#3a3532" },
   { id: "raw_bear_meat", name: "Raw bear meat", sell: 172, swatch: "#7a4038" },
@@ -16,14 +16,14 @@ Idle.data.cookingItems = [
   { id: "raw_anchovies", name: "Raw anchovies", sell: 19, swatch: "#c9b18a" },
   { id: "raw_sardine", name: "Raw sardine", sell: 27, swatch: "#b7c4ce" },
   { id: "raw_herring", name: "Raw herring", sell: 213, swatch: "#8fa7b5" },
-  { id: "raw_guppy", name: "Raw guppy", sell: 0, swatch: "#7d9a6a", blurb: "Can be skinned for altars." },
+  { id: "raw_guppy", name: "Raw guppy", sell: 5, swatch: "#7d9a6a", blurb: "Can be skinned for altars." },
   { id: "raw_t_bone_steak", name: "Raw t-bone steak", sell: 181, swatch: "#c45b5b" },
   { id: "raw_trout", name: "Raw trout", sell: 53, swatch: "#d2a679" },
   { id: "raw_pike", name: "Raw pike", sell: 96, swatch: "#8aa0b5" },
-  { id: "raw_cavefish", name: "Raw cavefish", sell: 0, swatch: "#6e7d92", blurb: "Used for altars." },
+  { id: "raw_cavefish", name: "Raw cavefish", sell: 5, swatch: "#6e7d92", blurb: "Used for altars." },
   { id: "raw_salmon", name: "Raw salmon", sell: 32, swatch: "#d07a62" },
   { id: "raw_tuna", name: "Raw tuna", sell: 42, swatch: "#c45b5b" },
-  { id: "raw_tetra", name: "Raw tetra", sell: 0, swatch: "#c9a24a", blurb: "Used for altars." },
+  { id: "raw_tetra", name: "Raw tetra", sell: 10, swatch: "#c9a24a", blurb: "Used for altars." },
   { id: "raw_lobster", name: "Raw lobster", sell: 124, swatch: "#b4483a" },
   { id: "raw_swordfish", name: "Raw swordfish", sell: 215, swatch: "#8d9aa8" },
 ];

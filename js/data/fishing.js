@@ -3,13 +3,13 @@ window.Idle = window.Idle || {};
 Idle.data = Idle.data || {};
 
 Idle.data.fishingTools = [
-  { id: "small_fishing_net", name: "Small fishing net", sell: 0, swatch: "#8a6a3b" },
-  { id: "cave_small_fishing_net", name: "Cave small fishing net", sell: 0, swatch: "#6e7d92" },
-  { id: "lobster_pot", name: "Lobster pot", sell: 0, swatch: "#b4483a" },
-  { id: "harpoon", name: "Harpoon", sell: 0, swatch: "#8d9aa8" },
-  { id: "fly_fishing_rod", name: "Fly fishing rod", sell: 0, swatch: "#8a6a3b" },
+  { id: "small_fishing_net", name: "Small fishing net", sell: 25, swatch: "#8a6a3b" },
+  { id: "cave_small_fishing_net", name: "Cave small fishing net", sell: 25, swatch: "#6e7d92" },
+  { id: "lobster_pot", name: "Lobster pot", sell: 181, swatch: "#b4483a" },
+  { id: "harpoon", name: "Harpoon", sell: 97, swatch: "#8d9aa8" },
+  { id: "fly_fishing_rod", name: "Fly fishing rod", sell: 99, swatch: "#8a6a3b" },
   { id: "feather", name: "Feather", sell: 0, swatch: "#e6e0d2" },
-  { id: "fishing_rod", name: "Fishing rod", sell: 0, swatch: "#8a6a3b" },
+  { id: "fishing_rod", name: "Fishing rod", sell: 99, swatch: "#8a6a3b" },
 ];
 
 const fish = (id, name, level, xp, sell, swatch) => ({ id, name, level, xp, sell, swatch });

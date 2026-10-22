@@ -25,6 +25,8 @@ Idle.state = {
     firemaking: Idle.professions.firemaking.createSkill(),
     farming: Idle.professions.farming.createSkill(),
     fletching: Idle.professions.fletching.createSkill(),
+    thieving: Idle.professions.thieving.createSkill(),
+    agility: Idle.professions.agility.createSkill(),
     slayer: { level: 1, xp: 0, xpToNext: Idle.config.baseXpToLevel },
   },
   combatSkills: Idle.systems.combat.createSkills(),
@@ -136,6 +138,10 @@ Idle.boot = function boot() {
   }
   Idle.state.active.mining = saved.active && saved.active.mining ? saved.active.mining : null;
   Idle.state.activity = saved.activity || (Idle.state.active.mining ? { profession: "mining", id: Idle.state.active.mining } : null);
+  if (Idle.state.activity && Idle.state.activity.until) {
+    Idle.state.activity.phase = null;
+    Idle.state.activity.until = null;
+  }
   if (saved.equipment) Idle.state.equipment = { ...Idle.systems.equipment.empty(), ...saved.equipment };
   if (saved.combatSkills) {
     Idle.state.combatSkills = Idle.systems.combat.createSkills();

@@ -38,11 +38,25 @@ Idle.ui = {
       this.paintFishTravel(now);
       this.paintQuestRun(now);
       this.paintCampfire(now);
+      this.paintAmbience(now);
       this.syncGeSound();
       this.syncWalkSound();
       if (Idle.state.bury) return;
       if (Idle.state.fight || Idle.state.leave || Idle.state.exit || Idle.state.altar || Idle.state.questRun || (Idle.state.activity && Idle.state.activity.phase === "travel") || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
       if (!Idle.state.running || !Idle.state.activity) return;
+      if (Idle.state.activity && Idle.state.activity.profession === "thieving" && Idle.state.activity.phase && Idle.state.activity.until) {
+        if (now < Idle.state.activity.until) {
+          const left = Math.ceil((Idle.state.activity.until - now) / 1000);
+          const label = this.root && this.root.querySelector("[data-tick-label]");
+          const fill = this.root && this.root.querySelector("[data-tick-fill]");
+          if (label) label.textContent = Idle.state.activity.phase === "stun" ? `Stunned · ${left}s` : `Walking to next · ${left}s`;
+          if (fill) fill.style.width = `${Math.min(100, ((now - (Idle.state.activity.until - (Idle.state.activity.phase === "stun" ? 5000 : 2000))) / (Idle.state.activity.phase === "stun" ? 5000 : 2000)) * 100)}%`;
+          return;
+        }
+        Idle.state.activity.phase = null;
+        Idle.state.activity.until = null;
+        this.tickStartedAt = now;
+      }
       if (wait > 0 && now - this.tickStartedAt < wait) return;
       this.tickStartedAt = now;
       this.catchMs = null;
@@ -245,6 +259,10 @@ Idle.ui = {
       names.push(`+${mob.prayerOnKill} prayer`);
     }
     Idle.state.pushLog({ kind: "gem", text: `${mob.name} defeated. ${names.join(", ") || "No room for loot."}` });
+    if (mob.id === "grizzly_bear") {
+      const sounds = ["bear_dth", "bear_die"];
+      Idle.systems.sound.play(sounds[Math.floor(Math.random() * sounds.length)], false);
+    }
     if (mob.id === "brutus") Idle.state.brutusDefeated = true;
     if (mob.id === "goblin" || mob.id === "cave_goblin") Idle.state.goblinKills = (Idle.state.goblinKills || 0) + 1;
     if (Idle.state.questRun && Idle.state.questRun.phase === "explore_cave" && mob.id === "cave_goblin") {
@@ -308,8 +326,20 @@ Idle.ui = {
       phase: "down",
     };
     Idle.state.pushLog({ kind: "full", text: `You died at ${mob.name}. Retrieve your body within 15 minutes.` });
+    const deaths = Idle.state.gender === "female" ? ["death_f", "death_fb", "death_fl"] : ["death_m", "death_mb", "death_ml"];
+    Idle.systems.sound.play(deaths[Math.floor(Math.random() * deaths.length)], false);
     Idle.systems.save.write(Idle.state);
     this.render();
+  },
+
+  paintAmbience(now) {
+    const town = Idle.state.town;
+    if (town !== "lumbridge" && town !== "varrock") return;
+    if (!this.nextBird || now > this.nextBird) {
+      const birds = ["bird01", "bird02", "bird03", "bird04", "bird05"];
+      Idle.systems.sound.play(birds[Math.floor(Math.random() * birds.length)], false);
+      this.nextBird = now + (8000 + Math.random() * 12000);
+    }
   },
 
   paintRecovery(now) {
@@ -439,6 +469,10 @@ Idle.ui = {
       const seconds = fish.length ? Idle.professions.fishing.catchSeconds(fish[fish.length - 1]) : 3;
       if (!this.catchMs) this.catchMs = seconds * 1000;
       return this.catchMs;
+    }
+    if (job && (job.profession === "thieving" || job.profession === "agility")) {
+      const seconds = Number(current.time || current.seconds) || 1.2;
+      return Math.max(1200, seconds * 1000);
     }
     return Math.max(0, Number(current.seconds || current.respawn) || 0) * 1000;
   },
@@ -609,6 +643,49 @@ Idle.ui = {
       this.render();
       return;
     }
+    if (next && next.place === "varrock" && next.chest) {
+      Idle.state.town = "varrock";
+      Idle.state.place = "varrock";
+      Idle.state.pushLog({ kind: "pick", text: "Pirate message: Go to Falador park and dig with a spade." });
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
+    if (next && next.place === "falador" && next.dig) {
+      Idle.state.town = "falador";
+      Idle.state.place = "falador";
+      Idle.state.pushLog({ kind: "pick", text: "You dug in Falador park. Fight the gardener for the treasure." });
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
+    if (next && next.place === "port_sarim" && next.retrieve) {
+      Idle.state.town = "port_sarim";
+      Idle.state.place = "port_sarim";
+      Idle.systems.inventory.add(Idle.state.slots, "karamjan_rum", 1);
+      Idle.state.pushLog({ kind: "pick", text: "You found the Karamjan rum in the crate." });
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
+    if (next && next.place === "rimmington" && next.quest === "witchs_potion") {
+      Idle.state.town = "rimmington";
+      Idle.state.place = "rimmington";
+      Idle.state.screen = "quests";
+      Idle.state.questProgress = Idle.state.questProgress || {};
+      Idle.state.questProgress.witchs_potion = true;
+      if (next.turnIn) {
+        Idle.state.depositOpen = true;
+        Idle.state.depositQuest = "witchs_potion";
+        Idle.state.deposit = Array.from({ length: 8 }, () => null);
+        Idle.state.pushLog({ kind: "pick", text: "Hetty: Deposit the ingredients." });
+      } else {
+        Idle.state.pushLog({ kind: "pick", text: "Hetty: Bring me burnt meat, an eye of newt, an onion, and a rat's tail." });
+      }
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
     if (next && next.place === "quest") {
       Idle.state.place = "town";
       Idle.state.screen = "quests";
@@ -634,6 +711,16 @@ Idle.ui = {
       Idle.state.place = next.place;
       Idle.state.screen = "town";
       Idle.state.pushLog({ kind: "pick", text: `Arrived in ${Idle.data.towns[next.place].name}.` });
+      if (next.place === "varrock" && Idle.systems.inventory.count(Idle.state.slots, "hectors_chest_key") > 0 && !Idle.state.quests.pirates_treasure) {
+        this.stopOther();
+        Idle.state.place = "walking";
+        Idle.state.leave = { steps: [{ label: "The key is pulling you to a chest", travel: 5 }], step: 0, startedAt: performance.now(), next: { place: "varrock", chest: true }, town: false };
+      }
+      if (next.place === "falador" && Idle.systems.inventory.count(Idle.state.slots, "spade") > 0 && Idle.state.questProgress && Idle.state.questProgress.pirates_treasure && !Idle.state.quests.pirates_treasure) {
+        this.stopOther();
+        Idle.state.place = "walking";
+        Idle.state.leave = { steps: [{ label: "Digging in Falador park", travel: 5 }], step: 0, startedAt: performance.now(), next: { place: "falador", dig: true }, town: false };
+      }
       Idle.systems.save.write(Idle.state);
       this.render();
       return;
@@ -1470,9 +1557,39 @@ Idle.ui = {
             <button class="btn danger" data-action="reset">Reset save</button>
           </div>
         </div>
+        ${this.questCompleteOverlay()}
+        ${this.choiceOverlay()}
       </div>
     `;
     this.bind();
+  },
+
+  choiceOverlay() {
+    const choice = Idle.state.choice;
+    if (!choice) return "";
+    return `
+      <div class="choice-overlay">
+        <div class="choice-box">
+          <p>${choice.text}</p>
+          ${choice.options.map((opt) => `<button class="btn" data-choice="${opt.id}">${opt.label}</button>`).join("")}
+        </div>
+      </div>
+    `;
+  },
+
+  questCompleteOverlay() {
+    const done = Idle.state.questComplete;
+    if (!done) return "";
+    return `
+      <div class="quest-complete" data-action="close-quest-complete">
+        <img src="images/questcomplete.png" alt="">
+        <div class="quest-complete-text">
+          <p>Congratulations!</p>
+          <p>${done.name}</p>
+          ${done.lines.map((line) => `<p>${line}</p>`).join("")}
+        </div>
+      </div>
+    `;
   },
 
   styleButtons() {
@@ -1532,10 +1649,12 @@ Idle.ui = {
     return `
       <header class="topbar">
         <div class="topbar-row">
-          <button class="brand" data-action="hub">Reincarnated as a Guild Innkeeper</button>
+          <div class="hp-bar-wrap">
+            <div class="bar hp-track"><span data-hp-fill style="width:${hpPct}%"></span></div>
+            <span data-hp-label>${hpNow} / ${hpMax} hp</span>
+          </div>
           <div class="status">
             <span class="pill" data-xp-label>${skill.name} ${skill.level} · ${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</span>
-            <span class="pill gold" data-gold>${this.format(Idle.state.gold)} gp</span>
           </div>
         </div>
         ${this.styleButtons()}
@@ -1625,10 +1744,15 @@ Idle.ui = {
         }).join("")}</div>`) : ""}
         ${town.npcs.length ? section("people", "People", `<div class="wheel">${town.npcs.map(npcLine).join("")}</div>`) : ""}
         ${town.services.length ? section("services", "Services", `<div class="wheel">${town.services.map((entry) => `<button class="node wheel-item" data-action="open-${entry.id}"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${entry.name}</span><span class="node-stat" style="display:inline">${entry.note}</span></span></button>`).join("")}</div>`) : ""}
-        ${section("travel", "Travel", `<div class="wheel">${others.map((entry) => {
+        ${section("travel", "Travel", `<div class="bubbles">${others.filter((entry) => {
           const key = `${town.id}|${entry.id}`;
-          const seconds = Idle.data.townTravel[key] || 60;
-          return `<button class="node wheel-item" data-travel="${entry.id}"><span class="node-copy"><span class="node-name">${entry.name}</span><span class="node-stat">${seconds}s walk</span></span></button>`;
+          if (Idle.data.townTravel[key] === undefined) return false;
+          if (entry.id === "karamja" && !Idle.state.karamjaUnlocked) return false;
+          if (town.id === "karamja") return false;
+          return true;
+        }).map((entry) => {
+          const label = entry.id === "karamja" ? "Sail to Karamja" : entry.name;
+          return `<button class="bubble" data-travel="${entry.id}">${label}</button>`;
         }).join("")}</div>`)}
       </section>
     `;
@@ -1815,6 +1939,74 @@ Idle.ui = {
     this.render();
   },
 
+  openWydinShop() {
+    Idle.state.screen = "wydin";
+    this.render();
+  },
+
+  wydinShop() {
+    Idle.state.wydin = Idle.state.wydin || {};
+    const stock = [
+      { id: "pot_of_flour", stock: 3, restock: 60, price: 10 },
+      { id: "raw_beef", stock: 1, restock: 60, price: 1 },
+      { id: "raw_chicken", stock: 1, restock: 60, price: 1 },
+      { id: "cabbage", stock: 3, restock: 60, price: 1 },
+      { id: "banana", stock: 3, restock: 60, price: 2 },
+      { id: "redberries", stock: 1, restock: 60, price: 3 },
+      { id: "bread", stock: 0, restock: 60, price: 12 },
+      { id: "chocolate_bar", stock: 1, restock: 60, price: 10 },
+      { id: "cheese", stock: 3, restock: 60, price: 4 },
+      { id: "tomato", stock: 3, restock: 60, price: 4 },
+      { id: "potato", stock: 1, restock: 60, price: 1 },
+      { id: "white_apron", stock: 2, restock: 60, price: 5 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.wydin[item.id] || { left: item.stock, next: 0, pct: 0 };
+      if (entry.left < item.stock && entry.next > 0 && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + item.restock * 1000;
+      }
+      Idle.state.wydin[item.id] = entry;
+    });
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <p class="kicker">Wydin's shop</p>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.wydin[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            const price = Math.max(1, Math.round(item.price * (1 + entry.pct)));
+            return `<button class="bubble" data-action="buy-wydin" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} · ${price} gp · ${entry.left}</button>`;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  buyWydin(id) {
+    const prices = { pot_of_flour: 10, raw_beef: 1, raw_chicken: 1, cabbage: 1, banana: 2, redberries: 3, bread: 12, chocolate_bar: 10, cheese: 4, tomato: 4, potato: 1, white_apron: 5 };
+    const entry = Idle.state.wydin[id];
+    if (!entry || entry.left <= 0) return;
+    const price = Math.max(1, Math.round(prices[id] * (1 + (entry.pct || 0))));
+    if (Idle.state.gold < price) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough gold." });
+      this.render();
+      return;
+    }
+    Idle.state.gold -= price;
+    entry.left -= 1;
+    if (!entry.next || entry.next < Date.now()) entry.next = Date.now() + 60 * 1000;
+    entry.pct = Math.max(-0.25, Math.min(0.25, (entry.pct || 0) + (Math.random() * 0.04 - 0.02)));
+    Idle.systems.inventory.add(Idle.state.slots, id, 1);
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
   store() {
     Idle.state.store = Idle.state.store || {};
     const stock = [
@@ -1835,7 +2027,7 @@ Idle.ui = {
     const now = Date.now();
     stock.forEach((item) => {
       const entry = Idle.state.store[item.id] || { left: item.stock, next: 0, pct: 0 };
-      if (entry.left < item.stock && now >= entry.next) {
+      if (entry.left < item.stock && entry.next > 0 && now >= entry.next) {
         entry.left += 1;
         entry.next = now + item.restock * 1000;
       }
@@ -1848,12 +2040,12 @@ Idle.ui = {
           <button class="text-btn" data-action="hub">Back</button>
         </div>
         <p class="hint">Buys at 40% of market price.</p>
-        <div class="wheel">
+        <div class="bubbles">
           ${stock.map((item) => {
             const entry = Idle.state.store[item.id];
             const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
             const price = Math.max(1, Math.round(item.price * (1 + entry.pct)));
-            return `<div class="node wheel-item" style="display:flex;align-items:center;gap:8px"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap;flex:1"><span class="node-name" style="display:inline">${name}</span><span class="node-stat" style="display:inline">${price} gp · ${entry.left} left</span></span><button class="btn" data-action="buy-store" data-item="${item.id}" style="padding:4px 8px;font-size:0.8rem" ${entry.left > 0 ? "" : "disabled"}>Buy</button></div>`;
+            return `<button class="bubble" data-action="buy-store" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} · ${price} gp · ${entry.left}</button>`;
           }).join("")}
         </div>
         <p class="kicker">Sell</p>
@@ -1970,6 +2162,118 @@ Idle.ui = {
     this.render();
   },
 
+  talkAubury() {
+    if (Idle.state.quests && Idle.state.quests.rune_mysteries) {
+      Idle.state.pushLog({ kind: "pick", text: "Aubury has nothing more." });
+      this.render();
+      return;
+    }
+    if (Idle.state.questProgress && Idle.state.questProgress.rune_mysteries) {
+      this.stopOther();
+      Idle.state.place = "walking";
+      Idle.state.leave = { steps: [{ label: "Talking to Aubury", travel: 10 }], step: 0, startedAt: performance.now(), next: { place: "varrock", rune: true }, town: false };
+      Idle.state.pushLog({ kind: "pick", text: "Talking to Aubury. 10 seconds." });
+    } else {
+      Idle.state.questProgress = Idle.state.questProgress || {};
+      Idle.state.questProgress.rune_mysteries = true;
+      Idle.state.pushLog({ kind: "pick", text: "Aubury: Talk to me again." });
+    }
+    this.render();
+  },
+
+  thieving() {
+    Idle.state.skills.thieving = Idle.state.skills.thieving || Idle.professions.thieving.createSkill();
+    const skill = Idle.state.skills.thieving;
+    const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
+    const targets = Idle.data.thieving.targets;
+    const stalls = Idle.data.thieving.stalls;
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Thieving</p></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="level-block">
+          <div class="level-label">Thieving ${skill.level}</div>
+          <div class="xp-meta">${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</div>
+          <div class="bar xp-track"><span style="width:${pct}%"></span></div>
+          <div class="bar hp-track"><span data-hp-fill style="width:${Math.max(0, ((Idle.state.hp || Idle.state.combatSkills.hitpoints.level) / Idle.state.combatSkills.hitpoints.level) * 100)}%"></span></div>
+          <div class="xp-meta" data-hp-label>${Idle.state.hp || Idle.state.combatSkills.hitpoints.level} / ${Idle.state.combatSkills.hitpoints.level} hp</div>
+        </div>
+        <div class="bubbles">
+          ${targets.map((t) => `<button class="bubble ${skill.level < t.level ? "locked" : ""}" data-thieve="${t.id}">Lvl ${t.level} ${t.name}</button>`).join("")}
+          ${stalls.map((s) => `<button class="bubble ${skill.level < s.level ? "locked" : ""}" data-stall="${s.id}">Lvl ${s.level} ${s.name}</button>`).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  agility() {
+    Idle.state.skills.agility = Idle.state.skills.agility || Idle.professions.agility.createSkill();
+    const skill = Idle.state.skills.agility;
+    const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
+    const courses = Idle.data.agility.courses.filter((c) => skill.level >= c.level);
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Agility</p><h1>Agility</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="level-block">
+          <div class="level-label">Agility ${skill.level}</div>
+          <div class="xp-meta">${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</div>
+          <div class="bar xp-track"><span style="width:${pct}%"></span></div>
+        </div>
+        <div class="bubbles">
+          ${courses.map((c) => `<button class="bubble" data-course="${c.id}">${c.name}</button>`).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  startThieve(id) {
+    const target = Idle.data.thieving.targets.find((t) => t.id === id);
+    if (!target) return;
+    if ((Idle.state.skills.thieving.level || 1) < target.level) {
+      Idle.state.pushLog({ kind: "full", text: `Need Thieving ${target.level}.` });
+      this.render();
+      return;
+    }
+    this.stopOther();
+    Idle.state.activity = { profession: "thieving", id, kind: "pick" };
+    Idle.state.running = true;
+    this.tickStartedAt = performance.now();
+    Idle.state.pushLog({ kind: "pick", text: `Pickpocketing ${target.name}.` });
+    this.render();
+  },
+
+  startStall(id) {
+    const stall = Idle.data.thieving.stalls.find((s) => s.id === id);
+    if (!stall) return;
+    if ((Idle.state.skills.thieving.level || 1) < stall.level) {
+      Idle.state.pushLog({ kind: "full", text: `Need Thieving ${stall.level}.` });
+      this.render();
+      return;
+    }
+    this.stopOther();
+    Idle.state.activity = { profession: "thieving", id, kind: "stall" };
+    Idle.state.running = true;
+    this.tickStartedAt = performance.now();
+    Idle.state.pushLog({ kind: "pick", text: `Stealing from ${stall.name}.` });
+    this.render();
+  },
+
+  startCourse(id) {
+    const course = Idle.data.agility.courses.find((c) => c.id === id);
+    if (!course) return;
+    this.stopOther();
+    Idle.state.activity = { profession: "agility", id, step: 0 };
+    Idle.state.running = true;
+    this.tickStartedAt = performance.now();
+    Idle.state.pushLog({ kind: "pick", text: `Starting ${course.name}.` });
+    this.render();
+  },
+
   fletching() {
     const skill = Idle.state.skills.fletching;
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
@@ -2077,7 +2381,21 @@ Idle.ui = {
   startTownTravel(id) {
     const from = Idle.state.town || "lumbridge";
     if (id === from) return;
-    const seconds = Idle.data.townTravel[`${from}|${id}`] || 60;
+    if (id === "karamja") {
+      if ((Idle.state.gold || 0) < 30) {
+        Idle.state.pushLog({ kind: "full", text: "Sailing to Karamja costs 30 gp." });
+        this.render();
+        return;
+      }
+      Idle.state.gold -= 30;
+      this.stopOther();
+      Idle.state.place = "walking";
+      Idle.state.leave = { steps: [{ label: "Sailing to Karamja", travel: 10 }], step: 0, startedAt: performance.now(), next: { place: "karamja" }, town: false };
+      Idle.state.pushLog({ kind: "pick", text: "Paid 30 gp. Sailing to Karamja. 10 seconds." });
+      this.render();
+      return;
+    }
+    const seconds = Idle.data.townTravel[`${from}|${id}`] || 15;
     const dest = Idle.data.towns[id];
     this.stopOther();
     Idle.state.place = "walking";
@@ -2144,6 +2462,8 @@ Idle.ui = {
       { id: "cooking", name: "Cooking", note: "Cook meat at the range" },
       { id: "fishing", name: "Fishing", note: "Catch fish at a spot" },
       { id: "crafting", name: "Crafting", note: "Spinning wheel and stations" },
+      { id: "thieving", name: "Thieving", note: "Pickpocket and stalls" },
+      { id: "agility", name: "Agility", note: "Rooftop courses" },
       ...(Idle.state.quests && Idle.state.quests.pandemonium ? [{ id: "sailing", name: "Sailing", note: "Rafts and the Pandemonium" }] : []),
       { id: "altar", name: "Altar", note: "Sacrifice fish for Prayer" },
     ];
@@ -2270,6 +2590,9 @@ Idle.ui = {
       { id: "woodchuckers_wood", title: "Woodchucker's Wood" },
       { id: "cave_explorer", title: "Cave Explorer" },
       { id: "goblin_slayer", title: "Goblin Slayer" },
+      { id: "imp_catcher", title: "Imp Catcher" },
+      { id: "witchs_potion", title: "Witch's Potion" },
+      { id: "pirates_treasure", title: "Pirate's Treasure" },
     ].filter((quest) => statusOf(quest.id) === tab);
     const open = this.questOpen;
     const cooks = Idle.data.quests.cooks_assistant;
@@ -2375,6 +2698,20 @@ Idle.ui = {
             ${done ? `<p class="hint">Finished. +875 Magic xp. Amulet of accuracy.</p>` : `<button class="btn" data-action="start-imp">Return to Wizard Mizgog</button>`}
           </div>` : ""}`;
       }
+      if (quest.id === "witchs_potion") {
+        const done = Idle.state.quests.witchs_potion;
+        const needs = Idle.data.quests.witchs_potion.needs;
+        const lines = needs.map((need) => {
+          const have = Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty;
+          return `<p class="${have ? "have" : "need"}">${need.qty} ${need.name}</p>`;
+        }).join("");
+        return `<button class="pill" data-action="open-witch">Witch's Potion</button>
+          ${opened ? `<div class="quest-sheet">
+            <p>Become one with your darker side. Bring Hetty the ingredients.</p>
+            ${lines}
+            ${done ? `<p class="hint">Finished. +325 Magic xp.</p>` : `<button class="btn" data-action="talk-hetty">Return to Hetty</button>`}
+          </div>` : ""}`;
+      }
       return "";
     };
     return `
@@ -2409,7 +2746,7 @@ Idle.ui = {
   combatStats() {
     const skills = Idle.state.combatSkills;
     const names = ["attack", "strength", "defence", "ranged", "magic", "prayer", "hitpoints"];
-    const professions = ["mining", "smithing", "cooking", "fishing", "crafting", "fletching", "sailing", "woodcutting", "slayer", "firemaking", "farming"];
+    const professions = ["mining", "smithing", "cooking", "fishing", "crafting", "fletching", "sailing", "woodcutting", "slayer", "firemaking", "farming", "thieving", "agility"];
     return `
       <section class="panel">
         <div class="screen-head">
@@ -2512,6 +2849,198 @@ Idle.ui = {
     this.render();
   },
 
+  talkRedbeard() {
+    Idle.state.choice = {
+      text: "Redbeard Frank: What do you want?",
+      options: [
+        { id: "redbeard-walk", label: "Walk away" },
+        { id: "redbeard-ask", label: "Ask about treasure" },
+      ],
+    };
+    this.render();
+  },
+
+  talkSailor() {
+    Idle.state.choice = {
+      text: "Sailor: Get lost, or give me some coin.",
+      options: [
+        { id: "sailor-walk", label: "Get lost" },
+        { id: "sailor-pay", label: "Give me some coin (30 gp)" },
+      ],
+    };
+    this.render();
+  },
+
+  talkLuthas() {
+    Idle.state.choice = {
+      text: "Luthas: What do you need?",
+      options: [
+        { id: "luthas-walk", label: "Walk away" },
+        { id: "luthas-job", label: "I want a job" },
+      ],
+    };
+    this.render();
+  },
+
+  talkWydin() {
+    const apron = Idle.state.equipment && Idle.state.equipment.body === "white_apron";
+    Idle.state.choice = {
+      text: apron ? "Wydin: Looking for work?" : "Wydin: Shop or leave.",
+      options: [
+        { id: "wydin-shop", label: "Shop" },
+        { id: "wydin-walk", label: "Walk away" },
+        ...(apron ? [{ id: "wydin-job", label: "Ask for a job" }] : []),
+      ],
+    };
+    this.render();
+  },
+
+  talkCustoms() {
+    const hasRum = Idle.systems.inventory.count(Idle.state.slots, "karamjan_rum") > 0;
+    if (hasRum) {
+      Idle.state.pushLog({ kind: "full", text: "Customs Officer: That is not permitted." });
+      this.render();
+      return;
+    }
+    Idle.state.choice = {
+      text: "Customs Officer: 30 gp to return to Port Sarim.",
+      options: [
+        { id: "customs-walk", label: "Walk away" },
+        { id: "customs-pay", label: "Pay 30 gp" },
+      ],
+    };
+    this.render();
+  },
+
+  talkZembo() {
+    Idle.state.choice = {
+      text: "Zembo: Karamjan rum, 30 gp.",
+      options: [
+        { id: "zembo-walk", label: "Walk away" },
+        { id: "zembo-buy", label: "Buy 1 Karamjan rum" },
+      ],
+    };
+    this.render();
+  },
+
+  choose(id) {
+    Idle.state.choice = null;
+    if (id === "redbeard-walk" || id === "sailor-walk" || id === "luthas-walk" || id === "wydin-walk" || id === "customs-walk" || id === "zembo-walk") {
+      this.render();
+      return;
+    }
+    if (id === "redbeard-ask") {
+      const hasRum = Idle.systems.inventory.count(Idle.state.slots, "karamjan_rum") > 0;
+      if (hasRum) {
+        Idle.systems.inventory.removeQty(Idle.state.slots, "karamjan_rum", 1);
+        Idle.systems.inventory.add(Idle.state.slots, "hectors_chest_key", 1);
+        Idle.state.questProgress = Idle.state.questProgress || {};
+        Idle.state.questProgress.pirates_treasure = true;
+        Idle.state.pushLog({ kind: "pick", text: "Redbeard Frank: Here is Hector's chest key." });
+      } else {
+        Idle.state.pushLog({ kind: "pick", text: "Redbeard Frank: Bring me Karamjan rum." });
+        Idle.state.questProgress = Idle.state.questProgress || {};
+        Idle.state.questProgress.pirates_treasure = true;
+      }
+      this.render();
+      return;
+    }
+    if (id === "sailor-pay") {
+      Idle.state.karamjaUnlocked = true;
+      Idle.state.pushLog({ kind: "pick", text: "Sailor: I can take you to Karamja. 30 gp each trip." });
+      this.render();
+      return;
+    }
+    if (id === "luthas-job") {
+      const bananas = Idle.systems.inventory.count(Idle.state.slots, "banana");
+      if (bananas >= 10) {
+        Idle.systems.inventory.removeQty(Idle.state.slots, "banana", 10);
+        Idle.state.choice = {
+          text: "Luthas: 30 gp and the shipment goes to Wydin.",
+          options: [
+            { id: "luthas-pay", label: "Pay 30 gp" },
+            { id: "luthas-walk", label: "Walk away" },
+          ],
+        };
+      } else {
+        this.stopOther();
+        Idle.state.place = "walking";
+        Idle.state.leave = { steps: [{ label: "Hiding rum in crate", travel: 3 }], step: 0, startedAt: performance.now(), next: { place: "karamja" }, town: false };
+        Idle.state.pushLog({ kind: "pick", text: "Hiding rum in crate. 3 seconds." });
+      }
+      this.render();
+      return;
+    }
+    if (id === "luthas-pay") {
+      if ((Idle.state.gold || 0) < 30) {
+        Idle.state.pushLog({ kind: "full", text: "You need 30 gp." });
+        this.render();
+        return;
+      }
+      Idle.state.gold -= 30;
+      Idle.state.pushLog({ kind: "pick", text: "Luthas: The shipment is going to Wydin." });
+      this.render();
+      return;
+    }
+    if (id === "wydin-shop") {
+      this.openWydinShop();
+      return;
+    }
+    if (id === "wydin-job") {
+      Idle.state.pushLog({ kind: "pick", text: "Wydin: You're hired!" });
+      this.stopOther();
+      Idle.state.place = "walking";
+      Idle.state.leave = { steps: [{ label: "Searching for a banana crate", travel: 5 }], step: 0, startedAt: performance.now(), next: { place: "port_sarim", retrieve: true }, town: false };
+      this.render();
+      return;
+    }
+    if (id === "customs-pay") {
+      if ((Idle.state.gold || 0) < 30) {
+        Idle.state.pushLog({ kind: "full", text: "You need 30 gp." });
+        this.render();
+        return;
+      }
+      Idle.state.gold -= 30;
+      this.stopOther();
+      Idle.state.place = "walking";
+      Idle.state.leave = { steps: [{ label: "Returning to Port Sarim", travel: 20 }], step: 0, startedAt: performance.now(), next: { place: "port_sarim" }, town: false };
+      Idle.state.pushLog({ kind: "pick", text: "Returning to Port Sarim. 20 seconds." });
+      this.render();
+      return;
+    }
+    if (id === "zembo-buy") {
+      if ((Idle.state.gold || 0) < 30) {
+        Idle.state.pushLog({ kind: "full", text: "You need 30 gp." });
+        this.render();
+        return;
+      }
+      Idle.state.gold -= 30;
+      Idle.systems.inventory.add(Idle.state.slots, "karamjan_rum", 1);
+      Idle.state.pushLog({ kind: "pick", text: "Bought Karamjan rum." });
+      this.render();
+      return;
+    }
+    this.render();
+  },
+
+  startWitchsPotion() {
+    if (Idle.state.quests.witchs_potion) {
+      Idle.state.pushLog({ kind: "pick", text: "Hetty has her potion." });
+      this.render();
+      return;
+    }
+    const here = Idle.state.town === "rimmington";
+    const have = Idle.data.quests.witchs_potion.needs.every((need) => Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty);
+    this.stopOther();
+    Idle.state.place = "walking";
+    Idle.state.leave = { steps: here ? [] : [{ label: "Walking to Rimmington", travel: 15 }], step: 0, startedAt: performance.now(), next: { place: "rimmington", quest: "witchs_potion", turnIn: have }, town: false };
+    Idle.state.questProgress = Idle.state.questProgress || {};
+    Idle.state.questProgress.witchs_potion = true;
+    Idle.state.screen = "town";
+    Idle.state.pushLog({ kind: "pick", text: here ? "Talking to Hetty." : "Walking to Rimmington. 15 seconds." });
+    this.render();
+  },
+
   startImpCatcher() {
     if (Idle.state.quests.imp_catcher) {
       Idle.state.pushLog({ kind: "pick", text: "Wizard Mizgog has his beads." });
@@ -2576,8 +3105,14 @@ Idle.ui = {
     }
     if (quest.rewardItem) Idle.systems.inventory.add(Idle.state.slots, quest.rewardItem, 1);
     if (quest.gold) Idle.state.gold = (Idle.state.gold || 0) + quest.gold;
-    const reward = questId === "dorics_quest" ? "+1300 Mining xp. +180 gp." : questId === "cooks_assistant" ? "+300 Cooking xp. Cook-o-matic 100 unlocked." : questId === "fishers_friend" ? "+100 Fishing xp. +10 gp." : questId === "woodchuckers_wood" ? "+100 Woodcutting xp. +10 gp." : questId === "imp_catcher" ? "+875 Magic xp. Amulet of accuracy." : "Reward granted.";
-    Idle.state.pushLog({ kind: "level", text: `${quest.name} complete. ${reward}` });
+    const points = quest.points || 1;
+    const lines = [`${points} Quest Point${points > 1 ? "s" : ""}`];
+    if (quest.rewardXp) Object.entries(quest.rewardXp).forEach(([skill, amount]) => lines.push(`${amount} ${skill} xp`));
+    if (quest.gold) lines.push(`${quest.gold} gp`);
+    if (quest.rewardItem) lines.push(quest.rewardItem.replaceAll("_", " "));
+    if (quest.passive) lines.push("Cook-o-matic 100");
+    Idle.state.questComplete = { name: quest.name, lines };
+    Idle.state.pushLog({ kind: "level", text: `${quest.name} complete.` });
     Idle.systems.save.write(Idle.state);
     this.render();
   },
@@ -2922,6 +3457,8 @@ Idle.ui = {
     if (Idle.state.screen === "firemaking") return this.firemaking();
     if (Idle.state.screen === "farming") return this.farming();
     if (Idle.state.screen === "fletching") return this.fletching();
+    if (Idle.state.screen === "thieving") return this.thieving();
+    if (Idle.state.screen === "agility") return this.agility();
     if (Idle.state.screen === "fishing") return this.fishing();
     if (Idle.state.screen === "altar") return this.altar();
     if (Idle.state.screen === "equipment") return this.equipment();
@@ -2930,6 +3467,7 @@ Idle.ui = {
     if (Idle.state.screen === "stats") return this.combatStats();
     if (Idle.state.screen === "bestiary") return this.bestiary();
     if (Idle.state.screen === "store") return this.store();
+    if (Idle.state.screen === "wydin") return this.wydinShop();
     if (Idle.state.screen === "bank") return this.bank();
     if (Idle.state.screen === "spellbook") return this.spellbook();
     if (Idle.state.screen === "exchange") return this.exchange();
@@ -3195,6 +3733,19 @@ Idle.ui = {
       </button>`;
   },
 
+  openTreasure() {
+    const selected = Idle.state.selectedSlot;
+    const slot = selected === null ? null : Idle.state.slots[selected];
+    if (!slot || slot.id !== "one_eyed_hectors_treasure") return;
+    Idle.systems.inventory.removeQty(Idle.state.slots, "one_eyed_hectors_treasure", 1);
+    Idle.state.gold = (Idle.state.gold || 0) + 450;
+    Idle.systems.inventory.add(Idle.state.slots, "gold_ring", 1);
+    Idle.systems.inventory.add(Idle.state.slots, "emerald", 1);
+    Idle.state.pushLog({ kind: "pick", text: "Opened the treasure: 450 gp, gold ring, emerald." });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
   inventory() {
     const catalog = Idle.systems.inventory.catalog();
     const used = Idle.systems.inventory.usedCount(Idle.state.slots);
@@ -3236,6 +3787,7 @@ Idle.ui = {
             <button class="btn" data-action="eat" ${item && item.heal ? "" : "hidden"}>Eat · +${item && item.heal ? item.heal : 0}</button>
             <button class="btn" data-action="light-fire" ${item && item.id === "logs" ? "" : "hidden"}>Light campfire</button>
             <button class="btn" data-action="open-fletching" ${item && item.id === "knife" ? "" : "hidden"}>Fletching</button>
+            <button class="btn" data-action="open-treasure" ${item && item.id === "one_eyed_hectors_treasure" ? "" : "hidden"}>Open</button>
             <button class="btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
             <button class="btn" data-action="deposit" ${item && Idle.state.screen === "bank" ? "" : "hidden"}>Deposit</button>
             <button class="btn" data-action="open-combine">Combine</button>
@@ -3249,11 +3801,23 @@ Idle.ui = {
     this.root.querySelectorAll("[data-travel]").forEach((el) => {
       el.addEventListener("click", () => this.startTownTravel(el.dataset.travel));
     });
+    this.root.querySelectorAll("[data-choice]").forEach((el) => {
+      el.addEventListener("click", () => this.choose(el.dataset.choice));
+    });
     this.root.querySelectorAll("[data-town-mob]").forEach((el) => {
       el.addEventListener("click", () => this.startTownMob(el.dataset.townMob));
     });
     this.root.querySelectorAll("[data-fletch]").forEach((el) => {
       el.addEventListener("click", () => this.selectFletch(el.dataset.fletch));
+    });
+    this.root.querySelectorAll("[data-thieve]").forEach((el) => {
+      el.addEventListener("click", () => this.startThieve(el.dataset.thieve));
+    });
+    this.root.querySelectorAll("[data-stall]").forEach((el) => {
+      el.addEventListener("click", () => this.startStall(el.dataset.stall));
+    });
+    this.root.querySelectorAll("[data-course]").forEach((el) => {
+      el.addEventListener("click", () => this.startCourse(el.dataset.course));
     });
     this.root.querySelectorAll("[data-firecook]").forEach((el) => {
       el.addEventListener("click", () => this.cookOnFire(el.dataset.firecook));
@@ -3280,6 +3844,9 @@ Idle.ui = {
         if (action === "open-firemaking") this.setScreen("firemaking");
         if (action === "open-farming") this.setScreen("farming");
         if (action === "open-fletching") this.setScreen("fletching");
+        if (action === "open-thieving") this.setScreen("thieving");
+        if (action === "open-agility") this.setScreen("agility");
+        if (action === "talk-aubury") this.talkAubury();
         if (action === "plant-flax") this.plantFlax();
         if (action === "harvest-flax") this.harvestFlax();
         if (action === "open-fishing") this.setScreen("fishing");
@@ -3341,10 +3908,20 @@ Idle.ui = {
         if (action === "talk-lumberjack_beave") this.talkNpc("lumberjack_beave");
         if (action === "talk-talsy") this.talkNpc("talsy");
         if (action === "talk-wizard_mizgog") this.startImpCatcher();
+        if (action === "talk-hetty") this.startWitchsPotion();
+        if (action === "talk-redbeard") this.talkRedbeard();
+        if (action === "talk-sailor") this.talkSailor();
+        if (action === "talk-luthas") this.talkLuthas();
+        if (action === "talk-wydin") this.talkWydin();
+        if (action === "open-wydin-shop") this.openWydinShop();
+        if (action === "talk-customs") this.talkCustoms();
+        if (action === "talk-zembo") this.talkZembo();
+        if (action === "open-witch") { this.questOpen = this.questOpen === "witchs_potion" ? null : "witchs_potion"; this.render(); }
         if (action === "talk-lumberjack_beave") this.talkNpc("lumberjack_beave");
     if (action === "talk-talsy") this.talkNpc("talsy");
     if (action === "talk-general_store") this.openStore();
     if (action === "buy-store") this.buyStore(el.dataset.item);
+    if (action === "buy-wydin") this.buyWydin(el.dataset.item);
     if (action === "sell-store") this.sellStore(el.dataset.item);
     if (action === "start-cave") this.startCave();
     if (action === "turnin-slayer") this.turnInSlayer();
@@ -3372,6 +3949,7 @@ Idle.ui = {
         if (action === "quest-completed") { this.questTab = "completed"; this.render(); }
         if (action === "return-cook") this.returnToCook();
         if (action === "give-quest") this.giveQuest();
+        if (action === "close-quest-complete") { Idle.state.questComplete = null; this.render(); }
         if (action === "open-combine") { this.combineOpen = !this.combineOpen; this.render(); }
         if (action === "do-combine") this.doCombine();
         if (action.startsWith("craft-")) { this.craftStation = action.slice(6); this.render(); }
@@ -3391,6 +3969,7 @@ Idle.ui = {
         if (action === "bury" && Idle.state.selectedSlot !== null) this.startBury();
         if (action === "eat" && Idle.state.selectedSlot !== null) this.eatSelected();
         if (action === "light-fire" && Idle.state.selectedSlot !== null) this.startCampfire();
+        if (action === "open-treasure") this.openTreasure();
         if (action === "destroy" && Idle.state.selectedSlot !== null) {
           const index = Idle.state.selectedSlot;
           const gone = Idle.state.slots[index];

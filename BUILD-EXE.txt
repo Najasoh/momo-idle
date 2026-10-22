@@ -1,0 +1,16 @@
+Make a single .exe for a friend
+
+1. Install Node.js once from https://nodejs.org (the LTS button).
+2. Unzip the game folder. Open a terminal in that folder.
+   In File Explorer, click the address bar, type cmd, and press Enter.
+3. Run these two commands:
+
+   npm install
+   npx electron-builder --win portable
+
+4. The file is in the dist folder:
+   Guild Innkeeper 1.0.0.exe
+
+Send that one file. Your friend double-clicks it. No browser and no unzip.
+
+Do this again after any game change. npm install is only needed the first time, or after package.json changes.

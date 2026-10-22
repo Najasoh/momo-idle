@@ -433,29 +433,32 @@ h2 { font-size: 1.4rem; }
 .text-btn.danger { color: var(--danger); margin-top: 8px; }
 
 .wheel {
-  position: relative;
-  max-height: 280px;
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #17130f;
-  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  max-height: none;
+  overflow: visible;
+  border: none;
+  background: transparent;
 }
 
 .wheel-item {
-  position: relative;
-  width: 100%;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  gap: 12px;
+  width: auto;
+  display: inline-flex;
   align-items: center;
-  scroll-snap-align: start;
-  margin-bottom: 8px;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: #3a3228;
+  border: 1px solid #6a5a4a;
+  white-space: nowrap;
+  margin: 0;
 }
 .wheel-item.queued { box-shadow: inset 0 0 0 1px #c9a24a; }
 
-.wheel-item .swatch { margin: 0; width: 22px; height: 22px; }
+.wheel-item .node-stat { display: none; }
+.wheel-item .node-copy { display: inline; }
 .node-copy { min-width: 0; }
 .node-state { margin: 0; }
 
@@ -495,3 +498,15 @@ h2 { font-size: 1.4rem; }
 .offer { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .offer-row, .sale { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
 input.qty { position: static; width: 64px; }
+.quest-complete { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); cursor: pointer; }
+.quest-complete img { max-width: 640px; width: 80%; height: auto; }
+.quest-complete-text { position: absolute; text-align: center; color: #3a2a1a; font-weight: bold; line-height: 1.4; }
+.quest-complete-text p { margin: 2px 0; }
+.bubbles { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.bubble { background: #3a3228; border: 1px solid #6a5a4a; color: #d7c4a8; padding: 6px 12px; border-radius: 16px; cursor: pointer; white-space: nowrap; }
+.hp-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.hp-bar-wrap .hp-track { width: 180px; height: 12px; }
+.bubble.locked { opacity: 0.45; filter: grayscale(0.6); }
+.bubble.locked:hover { background: #4a2a2a; }
+.hp-track span { display: block; height: 100%; background: #c44a4a; }
+.choice-box { background: #2a241c; border: 1px solid #6a5a4a; padding: 16px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
