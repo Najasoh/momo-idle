@@ -216,6 +216,12 @@ Idle.ui = {
       const hit = Idle.systems.combat.playerHit(mob);
       fight.mobHp = Math.max(0, fight.mobHp - hit.damage);
       if (isBow && hit.damage > 0) Idle.systems.sound.play("arrowhit", false);
+      if (hit.damage > 0 && (mob.id === "man" || mob.id === "woman")) {
+        const male = ["gasp1m", "gasp1mb", "gasp1ml"];
+        const female = ["gasp1f", "gasp1fb", "gasp1fl"];
+        const gasps = mob.id === "woman" ? female : male;
+        Idle.systems.sound.play(gasps[Math.floor(Math.random() * gasps.length)], false);
+      }
       const xp = Idle.systems.combat.grantDamageXp(hit.damage);
       this.combatLine(`You hit ${hit.damage} (max ${hit.max}). ${xp}`);
       if (fight.mobHp <= 0) this.defeatMob(mob, fight, now);
