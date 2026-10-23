@@ -492,7 +492,7 @@ h2 { font-size: 1.4rem; }
   border-radius: 10px;
 }
 .settings-panel input { width: 100%; }
-.have { color: #8fbf7a; margin: 4px 0; }
+.pill.gold { color: #c9a24a; border-color: #c9a24a; }
 .need { color: #d37a6a; margin: 4px 0; }
 .quest-sheet { margin-top: 12px; }
 .offer { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }

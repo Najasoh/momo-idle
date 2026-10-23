@@ -18,6 +18,7 @@ Idle.data.agility = {
       name: "Varrock rooftop",
       level: 30,
       total: 70,
+      time: 7.8,
       mark: 0.13,
       obstacles: [
         { name: "Rough wall", xp: 13.5 },
@@ -36,8 +37,8 @@ Idle.data.agility = {
 
 Idle.data.woodcutting = Idle.data.woodcutting || {};
 Idle.data.woodcutting.trees = [
-  { id: "tree", name: "Tree", level: 1, xp: 25, hp: 3 },
-  { id: "oak", name: "Oak tree", level: 15, xp: 37.5, hp: 4 },
-  { id: "willow", name: "Willow tree", level: 30, xp: 67.5, hp: 5 },
-  { id: "yew", name: "Yew tree", level: 60, xp: 175, hp: 8 },
+  { id: "tree", name: "Tree", level: 1, xp: 25, hp: 3, seconds: 2.4 },
+  { id: "oak", name: "Oak tree", level: 15, xp: 37.5, hp: 6, seconds: 2.4 },
+  { id: "willow", name: "Willow tree", level: 30, xp: 67.5, hp: 12, seconds: 2.4 },
+  { id: "yew", name: "Yew tree", level: 60, xp: 175, hp: 24, seconds: 2.4 },
 ];

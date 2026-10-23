@@ -65,7 +65,7 @@ Idle.systems.exchange = {
       const deliver = ready - (sale.qty - sale.left);
       if (deliver > 0) {
         sale.left -= deliver;
-        state.mail.push({ id: "gold", qty: deliver * sale.price, name: `${sale.id} sold` });
+        state.mail.push({ id: "coins", qty: deliver * sale.price, name: `${sale.id} sold` });
       }
     });
     state.sales = state.sales.filter((sale) => sale.left > 0);
@@ -82,6 +82,9 @@ Idle.systems.exchange = {
         const existing = state.mail.find((entry) => entry.id === order.id);
         if (existing) existing.qty += deliver;
         else state.mail.push({ id: order.id, qty: deliver });
+        const price = state.prices[order.id] || 0;
+        state.ledger = state.ledger || [];
+        state.ledger.unshift({ id: order.id, qty: deliver, gold: -deliver * price, kind: "buy", at: now });
       }
     });
     state.orders = state.orders.filter((order) => order.left > 0);
@@ -97,11 +100,15 @@ Idle.systems.exchange = {
   takeMail(state, index) {
     const entry = state.mail[index];
     if (!entry) return;
+    if (entry.id === "coins") {
+      if (Idle.systems.inventory.add(state.slots, "coins", entry.qty)) state.mail.splice(index, 1);
+      const sounds = ["coins_cave01", "coins_cave02"];
+      Idle.systems.sound.play(sounds[Math.floor(Math.random() * sounds.length)], false);
+      return;
+    }
     if (entry.id === "gold") {
       state.gold += entry.qty;
       state.mail.splice(index, 1);
-      const coins = ["coins_cave01", "coins_cave02"];
-      Idle.systems.sound.play(coins[Math.floor(Math.random() * coins.length)], false);
       return;
     }
     if (Idle.systems.inventory.add(state.slots, entry.id, entry.qty)) state.mail.splice(index, 1);

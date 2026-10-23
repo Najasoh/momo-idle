@@ -6,7 +6,7 @@ Idle.data = Idle.data || {};
 Idle.data.anvilMetals = ["bronze", "iron", "steel", "silver", "gold", "mithril", "adamantite", "runite"];
 
 Idle.data.anvilItems = [
-  { id: "bronze_axe", name: "Bronze axe", metal: "bronze", level: 1, xp: 12.5, sell: 107, respawn: 3, cost: { bronze_bar: 1 }, swatch: "#b87333", equip: "weapon", hands: 1 },
+  { id: "bronze_axe", name: "Bronze axe", metal: "bronze", level: 1, xp: 12.5, sell: 107, respawn: 3, cost: { bronze_bar: 1 }, swatch: "#b87333", equip: "weapon", hands: 1, wc: 1 },
   { id: "bronze_dagger", name: "Bronze dagger", metal: "bronze", level: 1, xp: 12.5, sell: 84, respawn: 3, cost: { bronze_bar: 1 }, swatch: "#b87333", equip: "weapon", hands: 1 },
   { id: "bronze_mace", name: "Bronze mace", metal: "bronze", level: 2, xp: 12.5, sell: 70, respawn: 3, cost: { bronze_bar: 1 }, swatch: "#b87333", equip: "weapon", hands: 1 },
   { id: "bronze_med_helm", name: "Bronze med helm", metal: "bronze", level: 3, xp: 12.5, sell: 96, respawn: 3, cost: { bronze_bar: 1 }, swatch: "#b87333", equip: "helm" },

@@ -12,16 +12,71 @@ Idle.professions.woodcutting = {
   },
 
   hasAxe(slots) {
+    return Boolean(this.bestAxe(slots));
+  },
+
+  bestAxe(slots) {
     const catalog = Idle.systems.inventory.catalog();
-    return slots.some((slot) => slot && catalog[slot.id] && /axe/i.test(catalog[slot.id].name));
+    let best = null;
+    for (const slot of slots) {
+      if (!slot) continue;
+      const item = catalog[slot.id];
+      if (item && item.wc) {
+        if (!best || item.wc > best.wc) best = item;
+      }
+    }
+    return best;
   },
 
   nodes() {
-    return [{ id: "tree", name: "Tree", level: 1, xp: 25, hp: 3, seconds: 2.4, result: "logs" }];
+    return Idle.data.woodcutting.trees;
   },
 
   nodeById(id) {
     return this.nodes().find((node) => node.id === id) || null;
+  },
+
+  rollOak() {
+    if (Math.random() < 1 / 360000) Idle.systems.inventory.add(Idle.state.slots, "beaver", 1);
+    if (Math.random() < 1 / 4) Idle.systems.inventory.add(Idle.state.slots, "oak_leaves", 1);
+    if (Math.random() < 1 / 400) Idle.systems.inventory.add(Idle.state.slots, "ent_seed", 1);
+    if (Math.random() < 1 / 2407) Idle.systems.inventory.add(Idle.state.slots, "loop_half_of_key", 1);
+    if (Math.random() < 0.1) {
+      const nest = Math.random();
+      if (nest < 0.33) return "bird_nest_seeds";
+      if (nest < 0.66) return "bird_nest_rings";
+      return "bird_nest_egg";
+    }
+    return "oak_logs";
+  },
+
+  rollWillow() {
+    if (Math.random() < 1 / 360000) Idle.systems.inventory.add(Idle.state.slots, "beaver", 1);
+    if (Math.random() < 1 / 4) Idle.systems.inventory.add(Idle.state.slots, "willow_leaves", 1);
+    if (Math.random() < 1 / 400) Idle.systems.inventory.add(Idle.state.slots, "ent_seed", 1);
+    if (Math.random() < 1 / 2407) Idle.systems.inventory.add(Idle.state.slots, "loop_half_of_key", 1);
+    if (Math.random() < 0.1) {
+      const nest = Math.random();
+      if (nest < 0.33) return "bird_nest_seeds";
+      if (nest < 0.66) return "bird_nest_rings";
+      return "bird_nest_egg";
+    }
+    return "willow_logs";
+  },
+
+  rollYew() {
+    if (Math.random() < 1 / 360000) Idle.systems.inventory.add(Idle.state.slots, "beaver", 1);
+    if (Math.random() < 1 / 4) Idle.systems.inventory.add(Idle.state.slots, "yew_leaves", 1);
+    if (Math.random() < 1 / 400) Idle.systems.inventory.add(Idle.state.slots, "ent_seed", 1);
+    if (Math.random() < 1 / 2407) Idle.systems.inventory.add(Idle.state.slots, "loop_half_of_key", 1);
+    if (Math.random() < 1 / 40) Idle.systems.inventory.add(Idle.state.slots, "crystal_shard", 1);
+    if (Math.random() < 0.1) {
+      const nest = Math.random();
+      if (nest < 0.33) return "bird_nest_seeds";
+      if (nest < 0.66) return "bird_nest_rings";
+      return "bird_nest_egg";
+    }
+    return "yew_logs";
   },
 
   tick(state) {
@@ -32,17 +87,22 @@ Idle.professions.woodcutting = {
       state.activity = null;
       return { kind: "locked", text: "You need an axe to chop trees." };
     }
+    const axe = this.bestAxe(state.slots);
+    const dmg = axe.wc * (Math.random() < 0.33 ? 2 : 1);
     const tree = state.tree || { hp: node.hp };
-    tree.hp -= 1;
+    tree.hp -= dmg;
     state.tree = tree;
     if (tree.hp > 0) return { kind: "mine", text: `Chopped the tree. ${tree.hp} hp left.` };
-    const stored = Idle.systems.inventory.add(state.slots, node.result, 1);
+    const drop = node.id === "oak" ? this.rollOak() : node.id === "willow" ? this.rollWillow() : node.id === "yew" ? this.rollYew() : (node.result || "logs");
+    const stored = Idle.systems.inventory.add(state.slots, drop, 1);
     if (!stored) {
       state.activity = null;
       return { kind: "full", text: "Inventory is full. Chopping stopped." };
     }
     const levels = Idle.systems.xp.grant(skill, node.xp);
     state.tree = { hp: node.hp };
+    state.activity.phase = "respawn";
+    state.activity.until = performance.now() + (1 + Math.random() * 2) * 1000;
     let text = `Cut a tree (+${node.xp} Woodcutting xp).`;
     if (levels > 0) text += ` Woodcutting is now level ${skill.level}.`;
     return { kind: levels > 0 ? "level" : "mine", text };

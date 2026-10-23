@@ -57,6 +57,12 @@ Idle.data.towns = {
       { id: "thieving", name: "Thieving", note: "Pickpocket and stalls" },
       { id: "agility", name: "Agility", note: "Rooftop course" },
     ],
+    gather: [
+      { id: "tree", name: "Tree", note: "Needs an axe" },
+      { id: "oak", name: "Oak tree", note: "Woodcutting 15" },
+      { id: "willow", name: "Willow tree", note: "Woodcutting 30" },
+      { id: "yew", name: "Yew tree", note: "Woodcutting 60" },
+    ],
     mobs: [
       { id: "man", name: "Man", note: "" },
       { id: "woman", name: "Woman", note: "" },

@@ -35,6 +35,9 @@ Idle.data.altarFish = {
   cooked_cavefish: { seconds: 1.2, prayer: 7 },
   raw_tetra: { seconds: 2.3, prayer: 10 },
   cooked_tetra: { seconds: 2.3, prayer: 10 },
+  red_bird_egg: { seconds: 2.3, prayer: 100 },
+  blue_bird_egg: { seconds: 2.3, prayer: 100 },
+  green_bird_egg: { seconds: 2.3, prayer: 100 },
 };
 
 function food(id, name, level, xp, heal, sell, seconds, raw) {

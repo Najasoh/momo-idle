@@ -119,6 +119,24 @@ Idle.boot = function boot() {
   if (!Idle.state.skills.slayer) Idle.state.skills.slayer = { level: 1, xp: 0, xpToNext: Idle.config.baseXpToLevel };
   if (!Idle.state.skills.farming) Idle.state.skills.farming = Idle.professions.farming.createSkill();
   if (!Idle.state.skills.fletching) Idle.state.skills.fletching = Idle.professions.fletching.createSkill();
+  if (!Idle.state.skills.thieving) Idle.state.skills.thieving = Idle.professions.thieving.createSkill();
+  if (!Idle.state.skills.agility) Idle.state.skills.agility = Idle.professions.agility.createSkill();
+  if (saved.skills && saved.skills.thieving) {
+    Idle.state.skills.thieving = {
+      level: saved.skills.thieving.level || 1,
+      xp: saved.skills.thieving.xp || 0,
+      xpToNext: Idle.config.baseXpToLevel,
+    };
+    Idle.systems.xp.sync(Idle.state.skills.thieving);
+  }
+  if (saved.skills && saved.skills.agility) {
+    Idle.state.skills.agility = {
+      level: saved.skills.agility.level || 1,
+      xp: saved.skills.agility.xp || 0,
+      xpToNext: Idle.config.baseXpToLevel,
+    };
+    Idle.systems.xp.sync(Idle.state.skills.agility);
+  }
   if (!Idle.state.hops) Idle.state.hops = { crop: null, plantedAt: 0 };
   if (!Idle.state.seenMobs) Idle.state.seenMobs = {};
   if (!Idle.state.bank) Idle.state.bank = [];
@@ -127,7 +145,6 @@ Idle.boot = function boot() {
   if (saved.seenMobs) Idle.state.seenMobs = saved.seenMobs;
   if (saved.seenItems) Idle.state.seenItems = saved.seenItems;
   if (saved.hops) Idle.state.hops = saved.hops;
-  if (!Idle.state.goblinKills) Idle.state.goblinKills = 0;
   if (saved.skills && saved.skills.fishing) {
     Idle.state.skills.fishing = {
       level: saved.skills.fishing.level || 1,

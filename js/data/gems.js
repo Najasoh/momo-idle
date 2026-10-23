@@ -27,6 +27,7 @@ Idle.data.coinTable = [
   { qty: 50, weight: 2 },
 ];
 
+Idle.data.gemChance = 1 / 256;
 Idle.data.gemTable = [
   {
     id: "uncut_sapphire",

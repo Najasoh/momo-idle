@@ -44,6 +44,19 @@ Idle.ui = {
       if (Idle.state.bury) return;
       if (Idle.state.fight || Idle.state.leave || Idle.state.exit || Idle.state.altar || Idle.state.questRun || (Idle.state.activity && Idle.state.activity.phase === "travel") || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
       if (!Idle.state.running || !Idle.state.activity) return;
+      if (Idle.state.activity && Idle.state.activity.profession === "woodcutting" && Idle.state.activity.phase === "respawn" && Idle.state.activity.until) {
+        if (now < Idle.state.activity.until) {
+          const left = Math.ceil((Idle.state.activity.until - now) / 1000);
+          const label = this.root && this.root.querySelector("[data-tick-label]");
+          const fill = this.root && this.root.querySelector("[data-tick-fill]");
+          if (label) label.textContent = `Next tree · ${left}s`;
+          if (fill) fill.style.width = `${Math.min(100, ((now - (Idle.state.activity.until - 2000)) / 2000) * 100)}%`;
+          return;
+        }
+        Idle.state.activity.phase = null;
+        Idle.state.activity.until = null;
+        this.tickStartedAt = now;
+      }
       if (Idle.state.activity && Idle.state.activity.profession === "thieving" && Idle.state.activity.phase && Idle.state.activity.until) {
         if (now < Idle.state.activity.until) {
           const left = Math.ceil((Idle.state.activity.until - now) / 1000);
@@ -535,8 +548,9 @@ Idle.ui = {
   },
 
   shownSkill() {
-    const profession = Idle.state.screen === "fishing" ? "fishing" : Idle.state.screen === "cooking" ? "cooking" : Idle.state.screen === "smithing" || Idle.state.screen === "anvil" ? "smithing" : Idle.state.screen === "crafting" ? "crafting" : "mining";
-    const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting" };
+    const map = { fishing: "fishing", cooking: "cooking", smithing: "smithing", anvil: "smithing", crafting: "crafting", woodcutting: "woodcutting", thieving: "thieving", agility: "agility", farming: "farming", fletching: "fletching" };
+    const profession = map[Idle.state.screen] || "mining";
+    const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching" };
     return { name: names[profession], ...Idle.state.skills[profession] };
   },
 
@@ -1045,25 +1059,20 @@ Idle.ui = {
   woodcutting() {
     const skill = Idle.state.skills.woodcutting;
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
-    const hp = Idle.state.tree ? Idle.state.tree.hp : 3;
-    const active = Idle.state.activity && Idle.state.activity.profession === "woodcutting";
+    const trees = Idle.data.woodcutting.trees;
     return `
       <section class="panel">
         <div class="screen-head">
-          <div>
-            <p class="kicker">Gather</p>
-            <h1>Woodcutting</h1>
-          </div>
+          <div><p class="kicker">Woodcutting</p></div>
           <button class="text-btn" data-action="hub">Back</button>
         </div>
         <div class="level-block">
-          <div class="level-label">Woodcutting ${skill.level}</div>
-          <div class="xp-meta">${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</div>
-          <div class="bar xp-track" aria-hidden="true"><span style="width:${pct}%"></span></div>
+          <div class="xp-meta" data-xp-meta>${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp <span class="xp-gain">${this.gainText("woodcutting")}</span></div>
+          <div class="bar xp-track" aria-hidden="true"><span data-xp-fill style="width:${pct}%"></span></div>
         </div>
-        <button class="node wheel-item ${active ? "active" : ""}" data-gather="tree">
-          <span class="node-copy"><span class="node-name">Tree</span><span class="node-stat">${hp} hp · 25 xp · needs an axe</span></span>
-        </button>
+        <div class="bubbles">
+          ${trees.map((t) => `<button class="bubble ${skill.level < t.level ? "locked" : ""}" data-gather="${t.id}">Lvl ${t.level} ${t.name}</button>`).join("")}
+        </div>
       </section>
     `;
   },
@@ -1497,6 +1506,59 @@ Idle.ui = {
     if (!Idle.systems.inventory.add(Idle.state.bag, entry.id, entry.qty)) return;
     Idle.state.slots[index] = null;
     this.render();
+  },
+
+  openNest(id) {
+    const seeds = [
+      { id: "acorn", chance: 1 / 4.724, sell: 88 },
+      { id: "apple_tree_seed", chance: 1 / 5.947, sell: 18 },
+      { id: "willow_seed", chance: 1 / 7.489, sell: 44 },
+      { id: "banana_tree_seed", chance: 1 / 9.361, sell: 30 },
+      { id: "orange_tree_seed", chance: 1 / 11.89, sell: 34 },
+      { id: "curry_tree_seed", chance: 1 / 14.87, sell: 57 },
+      { id: "maple_seed", chance: 1 / 18.72, sell: 2247 },
+      { id: "pineapple_seed", chance: 1 / 24.07, sell: 64 },
+      { id: "papaya_tree_seed", chance: 1 / 29.74, sell: 1040 },
+      { id: "yew_seed", chance: 1 / 37.44, sell: 16258 },
+      { id: "palm_tree_seed", chance: 1 / 45.95, sell: 10611 },
+      { id: "calquat_tree_seed", chance: 1 / 59.47, sell: 313 },
+      { id: "spirit_seed", chance: 1 / 91.91, sell: 0 },
+      { id: "dragonfruit_tree_seed", chance: 1 / 168.5, sell: 129710 },
+      { id: "magic_seed", chance: 1 / 202.2, sell: 59570 },
+      { id: "teak_seed", chance: 1 / 252.8, sell: 82 },
+      { id: "mahogany_seed", chance: 1 / 252.8, sell: 66 },
+      { id: "celastrus_seed", chance: 1 / 337, sell: 12810 },
+      { id: "redwood_tree_seed", chance: 1 / 505.5, sell: 13057 },
+    ];
+    const rings = [
+      { id: "sapphire_ring", chance: 1 / 2.5, sell: 372 },
+      { id: "gold_ring", chance: 1 / 2.857, sell: 141 },
+      { id: "emerald_ring", chance: 1 / 6.667, sell: 555 },
+      { id: "ruby_ring", chance: 1 / 11.11, sell: 951 },
+      { id: "diamond_ring", chance: 1 / 100, sell: 1786 },
+    ];
+    const eggs = ["red_bird_egg", "blue_bird_egg", "green_bird_egg"];
+    if (!Idle.systems.inventory.removeQty(Idle.state.slots, id, 1)) return;
+    let drop = null;
+    if (id === "bird_nest_seeds") {
+      const total = seeds.reduce((sum, s) => sum + 1 / s.chance, 0);
+      let roll = Math.random() * total;
+      for (const seed of seeds) {
+        roll -= 1 / seed.chance;
+        if (roll < 0) { drop = seed.id; break; }
+      }
+    } else if (id === "bird_nest_rings") {
+      const total = rings.reduce((sum, r) => sum + 1 / r.chance, 0);
+      let roll = Math.random() * total;
+      for (const ring of rings) {
+        roll -= 1 / ring.chance;
+        if (roll < 0) { drop = ring.id; break; }
+      }
+    } else {
+      drop = eggs[Math.floor(Math.random() * eggs.length)];
+    }
+    if (drop) Idle.systems.inventory.add(Idle.state.slots, drop, 1);
+    Idle.state.pushLog({ kind: "pick", text: `Opened nest. Got ${drop.replaceAll("_", " ")}.` });
   },
 
   selectSlot(index) {
@@ -2052,6 +2114,12 @@ Idle.ui = {
         <div class="wheel">
           ${Idle.state.slots.filter(Boolean).map((slot) => {
             const item = catalog[slot.id];
+    if (slot.id === "bird_nest_seeds" || slot.id === "bird_nest_rings" || slot.id === "bird_nest_egg") {
+      this.openNest(slot.id);
+      Idle.state.selectedSlot = null;
+      this.render();
+      return;
+    }
             const price = Math.floor((Idle.state.prices[slot.id] || (item && item.sell) || 0) * 0.4);
             return `<button class="node wheel-item" data-action="sell-store" data-item="${slot.id}"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${item ? item.name : slot.id}</span><span class="node-stat" style="display:inline">${price} gp</span></span></button>`;
           }).join("") || `<p class="hint">Nothing to sell.</p>`}
@@ -2212,20 +2280,19 @@ Idle.ui = {
     Idle.state.skills.agility = Idle.state.skills.agility || Idle.professions.agility.createSkill();
     const skill = Idle.state.skills.agility;
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
-    const courses = Idle.data.agility.courses.filter((c) => skill.level >= c.level);
+    const courses = Idle.data.agility.courses;
     return `
       <section class="panel">
         <div class="screen-head">
-          <div><p class="kicker">Agility</p><h1>Agility</h1></div>
+          <div><p class="kicker">Agility</p></div>
           <button class="text-btn" data-action="hub">Back</button>
         </div>
         <div class="level-block">
-          <div class="level-label">Agility ${skill.level}</div>
           <div class="xp-meta">${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</div>
           <div class="bar xp-track"><span style="width:${pct}%"></span></div>
         </div>
         <div class="bubbles">
-          ${courses.map((c) => `<button class="bubble" data-course="${c.id}">${c.name}</button>`).join("")}
+          ${courses.map((c) => `<button class="bubble ${skill.level < c.level ? "locked" : ""}" data-course="${c.id}">Lvl ${c.level} ${c.name}</button>`).join("")}
         </div>
       </section>
     `;
@@ -2266,6 +2333,11 @@ Idle.ui = {
   startCourse(id) {
     const course = Idle.data.agility.courses.find((c) => c.id === id);
     if (!course) return;
+    if ((Idle.state.skills.agility.level || 1) < course.level) {
+      Idle.state.pushLog({ kind: "full", text: `Need Agility ${course.level}.` });
+      this.render();
+      return;
+    }
     this.stopOther();
     Idle.state.activity = { profession: "agility", id, step: 0 };
     Idle.state.running = true;
@@ -2426,19 +2498,25 @@ Idle.ui = {
       this.openHops();
       return;
     }
-    if (id !== "tree") return;
+    const tree = Idle.data.woodcutting.trees.find((t) => t.id === id);
+    if (!tree) return;
+    if ((Idle.state.skills.woodcutting.level || 1) < tree.level) {
+      Idle.state.pushLog({ kind: "full", text: `Need Woodcutting ${tree.level}.` });
+      this.render();
+      return;
+    }
     if (!Idle.professions.woodcutting.hasAxe(Idle.state.slots)) {
       Idle.state.pushLog({ kind: "full", text: "You need an axe to chop trees." });
       this.render();
       return;
     }
     this.stopOther("gather");
-    Idle.state.tree = Idle.state.tree || { hp: 3 };
-    Idle.state.activity = { profession: "woodcutting", id: "tree" };
+    Idle.state.tree = { hp: tree.hp };
+    Idle.state.activity = { profession: "woodcutting", id };
     Idle.state.running = true;
     Idle.state.screen = "woodcutting";
     this.tickStartedAt = performance.now();
-    Idle.state.pushLog({ kind: "pick", text: "Chopping the tree." });
+    Idle.state.pushLog({ kind: "pick", text: `Chopping ${tree.name}.` });
     this.render();
   },
 
@@ -2604,15 +2682,17 @@ Idle.ui = {
     };
     const card = (quest) => {
       const opened = open === quest.id;
+      const done = Idle.state.quests && Idle.state.quests[quest.id];
+      const gold = done ? "gold" : "";
       if (quest.id === "cooks_assistant") {
-        return `<button class="pill ${cooksDone ? "gold" : ""}" data-action="open-cooks">${cooksDone ? "Cook's Assistant · done" : "Cook's Assistant"}</button>
+        return `<button class="pill ${gold}" data-action="open-cooks">Cook's Assistant</button>
           ${opened ? `<div class="quest-sheet">
             ${cooks.needs.map(cooksLine).join("")}
-            ${cooksDone ? `<p class="hint">Finished. Cook-o-matic 100 is active.</p>` : cooksReady ? `<button class="btn" data-action="return-cook">Return to quest giver · 4 minutes</button>` : ""}
+            ${cooksDone ? "" : cooksReady ? `<button class="btn" data-action="return-cook">Return to quest giver · 4 minutes</button>` : ""}
           </div>` : ""}`;
       }
       if (quest.id === "sheep_shearer") {
-        return `<button class="pill" data-action="open-sheep">Sheep Shearer</button>
+        return `<button class="pill ${gold}" data-action="open-sheep">Sheep Shearer</button>
         ${opened ? `<div class="quest-sheet">
           <p>Talk to Fred, shear 20 sheep, then spin the wool.</p>
           ${Idle.state.quests.sheep_shearer ? `<p class="hint">Finished. +1 quest point, 150 Crafting xp, 60 gp.</p>` : `<button class="btn" data-action="start-sheep">Start · walk to Fred · 1 minute</button>`}
@@ -2625,7 +2705,7 @@ Idle.ui = {
           const have = Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty;
           return `<p class="${have ? "have" : "need"}">${need.qty} ${need.name}</p>`;
         };
-        return `<button class="pill" data-action="open-doric">Doric's Quest</button>
+        return `<button class="pill ${gold}" data-action="open-doric">Doric's Quest</button>
           ${opened ? `<div class="quest-sheet">
             <p>Bring Doric 6 clay, 4 copper ore, and 2 iron ore.</p>
             ${doric.needs.map(doricLine).join("")}
@@ -2635,7 +2715,7 @@ Idle.ui = {
       if (quest.id === "ides_of_milk") {
         const idesDone = Idle.state.quests.ides_of_milk;
         const idesReady = Idle.state.brutusDefeated;
-        return `<button class="pill" data-action="open-ides">The Ides of Milk</button>
+        return `<button class="pill ${gold}" data-action="open-ides">The Ides of Milk</button>
           ${opened ? `<div class="quest-sheet">
             <p>Meet Cassius at the Lumbridge pond, then defeat Brutus at the cow pen.</p>
             ${idesDone ? `<p class="hint">Finished. Brutus stays farmable.</p>` : idesReady ? `<button class="btn" data-action="return-cassius">Return to Cassius · 20 seconds</button>` : `<button class="btn" data-action="start-ides">Start · walk to Lumbridge pond · 20 seconds</button>`}
@@ -2643,7 +2723,7 @@ Idle.ui = {
       }
       if (quest.id === "pandemonium") {
         const pandeDone = Idle.state.quests.pandemonium;
-        return `<button class="pill" data-action="open-pande">Pandemonium</button>
+        return `<button class="pill ${gold}" data-action="open-pande">Pandemonium</button>
           ${opened ? `<div class="quest-sheet">
             <p>Salvage a shipwreck, set up the Pandemonium, and deliver cargo.</p>
             ${pandeDone ? `<p class="hint">Finished. Sailing unlocked. Raft and 25 sawmill coupons granted.</p>` : `<button class="btn" data-action="start-pande">Start · Port Sarim docks</button>`}
@@ -2652,7 +2732,7 @@ Idle.ui = {
       if (quest.id === "fishers_friend") {
         const done = Idle.state.quests.fishers_friend;
         const ready = Idle.systems.inventory.count(Idle.state.slots, "raw_shrimp") >= 20;
-        return `<button class="pill" data-action="open-fishers">Fisher's Friend</button>
+        return `<button class="pill ${gold}" data-action="open-fishers">Fisher's Friend</button>
           ${opened ? `<div class="quest-sheet">
             <p class="${ready ? "have" : "need"}">20 Raw shrimp</p>
             ${done ? `<p class="hint">Finished. +100 Fishing xp, 10 gp.</p>` : `<button class="btn" data-action="turnin-fishers">${ready ? "Give 20 raw shrimp" : "Talk to Fisher Fred"}</button>`}
@@ -2661,7 +2741,7 @@ Idle.ui = {
       if (quest.id === "woodchuckers_wood") {
         const done = Idle.state.quests.woodchuckers_wood;
         const ready = Idle.systems.inventory.count(Idle.state.slots, "logs") >= 20;
-        return `<button class="pill" data-action="open-wood">Woodchucker's Wood</button>
+        return `<button class="pill ${gold}" data-action="open-wood">Woodchucker's Wood</button>
           ${opened ? `<div class="quest-sheet">
             <p class="${ready ? "have" : "need"}">20 Logs</p>
             ${done ? `<p class="hint">Finished. +100 Woodcutting xp, 10 gp.</p>` : `<button class="btn" data-action="turnin-wood">${ready ? "Give 20 logs" : "Talk to Lumberjack Beave"}</button>`}
@@ -2669,7 +2749,7 @@ Idle.ui = {
       }
       if (quest.id === "cave_explorer") {
         const done = Idle.state.quests.cave_explorer;
-        return `<button class="pill" data-action="open-cave">Cave Explorer</button>
+        return `<button class="pill ${gold}" data-action="open-cave">Cave Explorer</button>
           ${opened ? `<div class="quest-sheet">
             <p>Walk to the cave and explore for 45 seconds. Goblins may appear.</p>
             ${done ? `<p class="hint">Finished. +1 quest point.</p>` : `<button class="btn" data-action="start-cave">Start · walk to cave</button>`}
@@ -2679,7 +2759,7 @@ Idle.ui = {
         const slayerDone = Idle.state.quests.goblin_slayer;
         const slayerReady = (Idle.state.goblinKills || 0) >= 100;
         const caveDone = Idle.state.quests.cave_explorer;
-        return `<button class="pill" data-action="open-slayer">Goblin Slayer</button>
+        return `<button class="pill ${gold}" data-action="open-slayer">Goblin Slayer</button>
           ${opened ? `<div class="quest-sheet">
             <p class="${slayerReady ? "have" : "need"}">${Idle.state.goblinKills || 0} / 100 goblins</p>
             ${slayerDone ? `<p class="hint">Finished. +300 Slayer xp, 2 quest points.</p>` : caveDone ? `<button class="btn" data-action="turnin-slayer"${slayerReady ? "" : " disabled"}>Turn in</button>` : `<p class="hint">Finish Cave Explorer first.</p>`}
@@ -2689,7 +2769,7 @@ Idle.ui = {
         const done = Idle.state.quests.imp_catcher;
         const beads = ["black_bead", "yellow_bead", "red_bead", "white_bead"];
         const have = beads.map((id) => Idle.systems.inventory.count(Idle.state.slots, id) >= 1);
-        return `<button class="pill" data-action="open-imp">Imp Catcher</button>
+        return `<button class="pill ${gold}" data-action="open-imp">Imp Catcher</button>
           ${opened ? `<div class="quest-sheet">
             <p class="${have[0] ? "have" : "need"}">Black bead</p>
             <p class="${have[1] ? "have" : "need"}">Yellow bead</p>
@@ -2705,7 +2785,7 @@ Idle.ui = {
           const have = Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty;
           return `<p class="${have ? "have" : "need"}">${need.qty} ${need.name}</p>`;
         }).join("");
-        return `<button class="pill" data-action="open-witch">Witch's Potion</button>
+        return `<button class="pill ${gold}" data-action="open-witch">Witch's Potion</button>
           ${opened ? `<div class="quest-sheet">
             <p>Become one with your darker side. Bring Hetty the ingredients.</p>
             ${lines}
@@ -3351,8 +3431,8 @@ Idle.ui = {
         </div>` : `
         <div class="wheel" data-wheel>
           ${sellable.map((slot, index) => `
-            <button class="node wheel-item ${this.sellPick === slot.id ? "active" : ""}" data-action="pick-sell" data-item="${slot.id}">
-              <span class="node-copy"><span class="node-name">${catalog[slot.id].name}</span><span class="node-stat">× ${slot.qty}</span></span>
+            <button class="node wheel-item ${this.sellPick === slot.id ? "active" : ""}" data-action="pick-sell" data-item="${slot.id}" data-qty="${slot.qty}">
+              <span class="node-copy"><span class="node-name">${catalog[slot.id].name}</span></span>
             </button>`).join("") || `<p class="hint">Nothing to sell.</p>`}
         </div>
         ${this.sellPick ? `<div class="offer-row">
@@ -3375,12 +3455,18 @@ Idle.ui = {
   mailbox() {
     Idle.systems.exchange.ensure(Idle.state);
     const catalog = Idle.systems.inventory.catalog();
+    const tab = this.mailTab || "mail";
+    const ledger = Idle.state.ledger || [];
     return `
       <section class="panel">
         <div class="screen-head">
-          <p class="kicker">Mailbox</p>
+          <div style="display:flex;gap:8px">
+            <button class="tab ${tab === "mail" ? "on" : ""}" data-action="mail-tab">Mailbox</button>
+            <button class="tab ${tab === "ledger" ? "on" : ""}" data-action="ledger-tab">Ledger</button>
+          </div>
           <button class="text-btn" data-action="hub">Back</button>
         </div>
+        ${tab === "mail" ? `
         <div class="wheel" data-wheel>
           ${Idle.state.mail.map((entry, index) => `
             <button class="node wheel-item" data-action="take-mail" data-mail="${index}">
@@ -3389,7 +3475,15 @@ Idle.ui = {
                 <span class="node-stat">× ${entry.qty} · take</span>
               </span>
             </button>`).join("") || `<p class="hint">Mailbox is empty.</p>`}
-        </div>
+        </div>` : `
+        <div class="wheel" data-wheel>
+          ${ledger.map((line) => {
+            const name = catalog[line.id] ? catalog[line.id].name : line.id.replaceAll("_", " ");
+            const color = line.gold >= 0 ? "#6a8f4a" : "#b33b4a";
+            const sign = line.gold >= 0 ? "+" : "";
+            return `<div class="node wheel-item"><span class="node-copy"><span class="node-name">${name} × ${line.qty}</span><span class="node-stat" style="color:${color}">${sign}${line.gold}</span></span></div>`;
+          }).join("") || `<p class="hint">No transactions yet.</p>`}
+        </div>`}
       </section>`;
   },
 
@@ -3855,6 +3949,7 @@ Idle.ui = {
         if (action === "open-bestiary") this.setScreen("bestiary");
         if (action === "open-quests") this.setScreen("quests");
         if (action === "open-exchange") this.goToMarket("exchange");
+        if (action === "open-mailbox") this.setScreen("mailbox");
         if (action === "open-bank") this.openBank();
         if (action === "deposit") this.depositSelected();
         if (action === "withdraw") this.withdraw(Number(el.dataset.bank));
