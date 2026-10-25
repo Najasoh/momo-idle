@@ -44,6 +44,30 @@ Idle.ui = {
       if (Idle.state.bury) return;
       if (Idle.state.fight || Idle.state.leave || Idle.state.exit || Idle.state.altar || Idle.state.questRun || (Idle.state.activity && Idle.state.activity.phase === "travel") || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
       if (!Idle.state.running || !Idle.state.activity) return;
+      if (Idle.state.activity && Idle.state.activity.id === "milk_cow") {
+        if (now - this.tickStartedAt < 2400) return;
+        this.tickStartedAt = now;
+        if (!Idle.systems.inventory.removeQty(Idle.state.slots, "bucket", 1)) {
+          Idle.state.activity = null;
+          Idle.state.running = false;
+          Idle.state.pushLog({ kind: "full", text: "No more buckets." });
+          this.render();
+          return;
+        }
+        if (!Idle.systems.inventory.add(Idle.state.slots, "bucket_of_milk", 1)) {
+          Idle.systems.inventory.add(Idle.state.slots, "bucket", 1);
+          Idle.state.activity = null;
+          Idle.state.running = false;
+          Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+          this.render();
+          return;
+        }
+        Idle.systems.xp.grant(Idle.state.skills.farming, 10);
+        Idle.state.pushLog({ kind: "level", text: "Milked a cow. +10 Farming xp." });
+        Idle.systems.save.write(Idle.state);
+        this.refreshLive();
+        return;
+      }
       if (Idle.state.activity && Idle.state.activity.profession === "woodcutting" && Idle.state.activity.phase === "respawn" && Idle.state.activity.until) {
         if (now < Idle.state.activity.until) {
           const left = Math.ceil((Idle.state.activity.until - now) / 1000);
@@ -206,6 +230,36 @@ Idle.ui = {
     }
     const playerWait = Idle.systems.combat.swingSeconds();
     const mobWait = mob.attackSpeed;
+    if (fight.fleeing) {
+      const fleeElapsed = (now - (fight.fleeStarted || now)) / 1000;
+      playerBars.forEach((bar) => { bar.style.width = `${Math.min(100, (fleeElapsed / 2.4) * 100)}%`; });
+      if (label) label.textContent = `Fleeing · ${Math.max(0, Math.ceil(2.4 - fleeElapsed))}s`;
+      if (fleeElapsed < 2.4) {
+        this.paintHp(fight, mob);
+        return;
+      }
+      fight.fleeStarted = now;
+      if (Math.random() < 0.1) {
+        const hit = Idle.systems.combat.playerHit(mob);
+        fight.mobHp = Math.max(0, fight.mobHp - hit.damage);
+        this.combatLine(`Flee failed. You hit ${hit.damage}.`);
+        const mobHit = Idle.systems.combat.monsterHit(mob);
+        fight.playerHp = Math.max(0, fight.playerHp - mobHit.damage);
+        this.combatLine(`${mob.name} hits ${mobHit.damage}.`);
+        if (fight.playerHp <= 0) {
+          this.die(mob);
+          return;
+        }
+        if (fight.mobHp <= 0) this.defeatMob(mob, fight, now);
+        this.paintHp(fight, mob);
+        return;
+      }
+      Idle.state.hp = fight.playerHp;
+      Idle.state.fight = null;
+      Idle.state.pushLog({ kind: "pick", text: "You fled." });
+      this.render();
+      return;
+    }
     const playerSwings = Math.floor(elapsed / playerWait);
     const mobSwings = Math.floor(elapsed / mobWait);
     if (playerSwings > (fight.playerSwings || 0)) {
@@ -554,9 +608,9 @@ Idle.ui = {
   },
 
   shownSkill() {
-    const map = { fishing: "fishing", cooking: "cooking", smithing: "smithing", anvil: "smithing", crafting: "crafting", woodcutting: "woodcutting", thieving: "thieving", agility: "agility", farming: "farming", fletching: "fletching" };
+    const map = { fishing: "fishing", cooking: "cooking", smithing: "smithing", anvil: "smithing", crafting: "crafting", woodcutting: "woodcutting", thieving: "thieving", agility: "agility", farming: "farming", fletching: "fletching", runecrafting: "runecrafting" };
     const profession = map[Idle.state.screen] || "mining";
-    const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching" };
+    const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching", runecrafting: "Runecrafting" };
     return { name: names[profession], ...Idle.state.skills[profession] };
   },
 
@@ -578,9 +632,9 @@ Idle.ui = {
       return;
     }
     this.stopOther();
-    Idle.state.place = "walking";
-    Idle.state.leave = { steps: [{ label: "Walking to the Grand Exchange", travel: 15, town: true }], step: 0, startedAt: performance.now(), next: { place: "market", screen }, town: false };
-    Idle.state.pushLog({ kind: "pick", text: "Walking to the Grand Exchange. 15 seconds." });
+    Idle.state.place = "market";
+    Idle.state.screen = screen;
+    Idle.state.pushLog({ kind: "pick", text: "At the Grand Exchange." });
     this.render();
   },
 
@@ -645,6 +699,20 @@ Idle.ui = {
     const next = leave.next;
     Idle.state.leave = null;
     Idle.state.area = null;
+    if (next && next.place === "lumbridge" && next.quest === "goblin_troubles") {
+      Idle.state.town = "lumbridge";
+      Idle.state.place = "lumbridge";
+      Idle.state.screen = "town";
+      if (next.turnIn) {
+        Idle.state.depositOpen = true;
+        Idle.state.depositQuest = "goblin_troubles";
+        Idle.state.deposit = Array.from({ length: 8 }, () => null);
+        Idle.state.pushLog({ kind: "pick", text: "Head Goblin Delegator: Deposit the items." });
+      }
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
     if (next && next.place === "wizards_tower" && next.quest === "imp_catcher") {
       Idle.state.town = "wizards_tower";
       Idle.state.place = "wizards_tower";
@@ -1161,9 +1229,12 @@ Idle.ui = {
     const on = Idle.state.activity && Idle.state.activity.profession === "mining" && Idle.state.activity.id === id;
     if (!on && Idle.state.place === "market") {
       this.stopOther();
-      Idle.state.place = "walking";
-      Idle.state.leave = { steps: [{ label: "Walking to the mine", travel: 15 }], step: 0, startedAt: performance.now(), next: { profession: "mining", id }, town: false };
-      Idle.state.pushLog({ kind: "pick", text: "Walking to the mine. 15 seconds." });
+      Idle.state.place = "town";
+      Idle.state.activity = { profession: "mining", id };
+      Idle.state.active.mining = id;
+      Idle.state.running = true;
+      this.tickStartedAt = performance.now();
+      Idle.state.pushLog({ kind: "pick", text: `Now mining ${node.name}.` });
       this.render();
       return;
     }
@@ -1247,6 +1318,7 @@ Idle.ui = {
   syncActivitySound() {
     const cooking = Idle.state.activity && Idle.state.activity.profession === "cooking";
     const anvil = Idle.state.activity && Idle.state.activity.profession === "anvil";
+    const smithing = Idle.state.activity && Idle.state.activity.profession === "smithing";
     if (cooking && !this.cookingSound) this.cookingSound = Idle.systems.sound.play("cooking", true);
     if (!cooking && this.cookingSound) {
       this.cookingSound.pause();
@@ -1256,6 +1328,11 @@ Idle.ui = {
     if (!anvil && this.anvilSound) {
       this.anvilSound.pause();
       this.anvilSound = null;
+    }
+    if (smithing && !this.smithingSound) this.smithingSound = Idle.systems.sound.play("smithing", true);
+    if (!smithing && this.smithingSound) {
+      this.smithingSound.pause();
+      this.smithingSound = null;
     }
   },
 
@@ -1302,6 +1379,30 @@ Idle.ui = {
     this.render();
   },
 
+  maxPrayer() {
+    const level = Idle.state.combatSkills.prayer.level || 1;
+    const bonus = Object.values(Idle.state.equipment || {}).reduce((sum, id) => {
+      if (!id) return sum;
+      const item = Idle.data.combatItems && Idle.data.combatItems[id];
+      return sum + (item && item.bonuses && item.bonuses.prayer || 0);
+    }, 0);
+    return level + bonus;
+  },
+
+  rechargePrayer() {
+    const prayer = Idle.state.combatSkills.prayer;
+    if (!prayer || prayer.level < 1) {
+      Idle.state.pushLog({ kind: "full", text: "You have no prayer level." });
+      this.render();
+      return;
+    }
+    const max = this.maxPrayer();
+    Idle.state.prayerPoints = max;
+    Idle.state.pushLog({ kind: "level", text: `Prayer recharged. ${max} points.` });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
   altar() {
     const catalog = Idle.systems.inventory.catalog();
     const fish = Object.entries(Idle.data.altarFish);
@@ -1315,6 +1416,7 @@ Idle.ui = {
           <button class="text-btn" data-action="hub">Back to menu</button>
         </div>
         <p class="hint">30 second walk. Pick a fish to sacrifice for Prayer.</p>
+        <button class="btn" data-action="recharge-prayer">Recharge prayer</button>
         <div class="wheel" data-wheel>
           ${fish.map(([id, rite]) => {
             const item = catalog[id] || { name: id, swatch: "#888" };
@@ -1626,6 +1728,7 @@ Idle.ui = {
           </div>
         </div>
         ${this.questCompleteOverlay()}
+        ${this.dialogueOverlay()}
         ${this.choiceOverlay()}
       </div>
     `;
@@ -1640,6 +1743,22 @@ Idle.ui = {
         <div class="choice-box">
           <p>${choice.text}</p>
           ${choice.options.map((opt) => `<button class="btn" data-choice="${opt.id}">${opt.label}</button>`).join("")}
+        </div>
+      </div>
+    `;
+  },
+
+  dialogueOverlay() {
+    const d = Idle.state.dialogue;
+    if (!d) return "";
+    return `
+      <div class="overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:100">
+        <div class="panel" style="max-width:420px;padding:16px">
+          <p class="kicker">${d.npc}</p>
+          <p>${d.text}</p>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            ${d.choices.map((c) => `<button class="btn" data-action="${c.action}">${c.label}</button>`).join("")}
+          </div>
         </div>
       </div>
     `;
@@ -1702,7 +1821,7 @@ Idle.ui = {
       tracker = `<div class="tickbar"><div class="tickbar-label"><span data-tick-label>Haggling · ${left}s</span></div><div class="tickbar-track"><span data-tick-fill style="width:${Math.min(100, ((elapsed % order.each) / order.each) * 100)}%"></span></div></div>`;
     }
     if (Idle.state.altar) tracker = `<div class="tickbar"><div class="tickbar-label"><span data-tick-label>Altar</span></div><div class="tickbar-track"><span data-tick-fill style="width:0%"></span></div></div>`;
-    if (Idle.state.campfire) {
+    if (Idle.state.campfire && Idle.state.campfire.phase !== "ask") {
       const fire = Idle.state.campfire;
       const fireElapsed = (performance.now() - fire.startedAt) / 1000;
       const fireLeft = fire.phase === "cook" ? Math.max(0, 30 - fireElapsed) : fire.phase === "light" ? Math.max(0, 2.4 - fireElapsed) : 0;
@@ -1723,9 +1842,11 @@ Idle.ui = {
           </div>
           <div class="status">
             <span class="pill" data-xp-label>${skill.name} ${skill.level} · ${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</span>
+            <button class="pill" data-action="toggle-buffs">Buffs</button>
           </div>
         </div>
         ${this.styleButtons()}
+        ${this.buffsPanel()}
         ${tracker}
       </header>
     `;
@@ -1801,8 +1922,9 @@ Idle.ui = {
         ${town.professions.length ? section("professions", "Professions", `<div class="wheel">${town.professions.map((entry) => `<button class="node wheel-item" data-action="open-${entry.id}"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${entry.name}</span><span class="node-stat" style="display:inline">${entry.note}</span></span></button>`).join("")}</div>`) : ""}
         ${town.mobs.length ? section("creatures", "Creatures", `<div class="wheel">${town.mobs.map((entry) => {
           const mob = Idle.systems.combat.mobById(entry.id);
-          const level = mob ? mob.level : "";
-          return `<button class="node wheel-item" data-town-mob="${entry.id}"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${entry.name}</span><span class="node-stat" style="display:inline">lvl ${level}${entry.note ? ` · ${entry.note}` : ""}</span></span></button>`;
+          const level = mob && mob.level ? mob.level : "";
+          const note = (entry.note || "").replace(/^lvl \d+\s*·?\s*/, "");
+          return `<button class="node wheel-item" data-town-mob="${entry.id}"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${entry.name}</span><span class="node-stat" style="display:inline">lvl ${level}${note ? ` · ${note}` : ""}</span></span></button>`;
         }).join("")}</div>`) : ""}
         ${town.gather && town.gather.length ? section("gather", "Gather", `<div class="wheel">${town.gather.map((entry) => {
           const hops = Idle.state.hops || {};
@@ -1908,6 +2030,21 @@ Idle.ui = {
     this.render();
   },
 
+  buffsPanel() {
+    if (!this.buffsOpen) return "";
+    const buffs = [];
+    const fire = Idle.state.campfire;
+    if (fire && fire.phase === "cook") {
+      const left = Math.max(0, Math.ceil(30 - (performance.now() - fire.startedAt) / 1000));
+      buffs.push(`Campfire ${left}s`);
+    }
+    if (Idle.state.teaBuff) {
+      const left = Math.max(0, Math.ceil((Idle.state.teaBuff.until - Date.now()) / 1000));
+      if (left > 0) buffs.push(`Tea +${Idle.state.teaBuff.attack} Attack ${left}s`);
+    }
+    return `<div class="buffs-panel" style="padding:4px 8px;background:#1a1410;border-bottom:1px solid #3a2e22">${buffs.length ? buffs.join(" · ") : "No active buffs"}</div>`;
+  },
+
   paintCampfire(now) {
     const fire = Idle.state.campfire;
     if (!fire) return;
@@ -1959,13 +2096,6 @@ Idle.ui = {
       this.root.querySelectorAll("[data-fire-fill]").forEach((bar) => { bar.style.width = `${Math.min(100, (elapsed / 30) * 100)}%`; });
       this.root.querySelectorAll("[data-tick-label]").forEach((el) => { el.textContent = `Campfire · ${Math.ceil(left)}s`; });
       if (left <= 0) {
-        if (!this.askedCampfire) {
-          this.askedCampfire = true;
-          fire.phase = "ask";
-          Idle.state.pushLog({ kind: "pick", text: "Continue lighting campfires?" });
-          this.render();
-          return;
-        }
         Idle.state.campfire = null;
         Idle.state.pushLog({ kind: "pick", text: "The campfire dies out." });
         this.render();
@@ -2282,6 +2412,54 @@ Idle.ui = {
     `;
   },
 
+  runecrafting() {
+    Idle.state.skills.runecrafting = Idle.state.skills.runecrafting || Idle.professions.runecrafting.createSkill();
+    const skill = Idle.state.skills.runecrafting;
+    const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
+    const altars = Idle.professions.runecrafting.nodes();
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Runecrafting</p></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="level-block">
+          <div class="xp-meta" data-xp-meta>${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp <span class="xp-gain">${this.gainText("runecrafting")}</span></div>
+          <div class="bar xp-track" aria-hidden="true"><span data-xp-fill style="width:${pct}%"></span></div>
+        </div>
+        <div class="bubbles">
+          ${altars.map((a) => `<button class="bubble ${skill.level < a.level ? "locked" : ""}" data-rc="${a.id}">Lvl ${a.level} ${a.name}</button>`).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  startRunecraft(id) {
+    const altar = Idle.professions.runecrafting.nodeById(id);
+    if (!altar) return;
+    if ((Idle.state.skills.runecrafting.level || 1) < altar.level) {
+      Idle.state.pushLog({ kind: "full", text: `Need Runecrafting ${altar.level}.` });
+      this.render();
+      return;
+    }
+    if (!Idle.professions.runecrafting.hasTalisman(Idle.state.slots, altar)) {
+      Idle.state.pushLog({ kind: "full", text: `You need a ${altar.talisman.replaceAll("_", " ")}.` });
+      this.render();
+      return;
+    }
+    if (!Idle.professions.runecrafting.hasEssence(Idle.state.slots)) {
+      Idle.state.pushLog({ kind: "full", text: "You need rune essence or pure essence." });
+      this.render();
+      return;
+    }
+    this.stopOther();
+    Idle.state.activity = { profession: "runecrafting", id };
+    Idle.state.running = true;
+    this.tickStartedAt = performance.now();
+    Idle.state.pushLog({ kind: "pick", text: `Crafting at ${altar.name}.` });
+    this.render();
+  },
+
   agility() {
     Idle.state.skills.agility = Idle.state.skills.agility || Idle.professions.agility.createSkill();
     const skill = Idle.state.skills.agility;
@@ -2493,9 +2671,9 @@ Idle.ui = {
     Idle.state.running = false;
     const mob = Idle.systems.combat.mobById(id);
     if (!mob) return;
-    Idle.state.fight = { mob: id, phase: "travel", startedAt: performance.now(), playerHp: Idle.state.combatSkills.hitpoints.level, mobHp: mob.hp, playerSwings: 0, mobSwings: 0, travelOverride: 10, local: true };
+    Idle.state.fight = { mob: id, phase: "fight", startedAt: performance.now(), playerHp: Idle.state.combatSkills.hitpoints.level, mobHp: mob.hp, playerSwings: 0, mobSwings: 0, local: true };
     Idle.state.screen = "adventure";
-    Idle.state.pushLog({ kind: "pick", text: `Searching for ${mob.name} in ${town.name}. 10 seconds.` });
+    Idle.state.pushLog({ kind: "pick", text: `Fighting ${mob.name} in ${town.name}.` });
     this.render();
   },
 
@@ -2504,26 +2682,59 @@ Idle.ui = {
       this.openHops();
       return;
     }
+    if (id === "milk_cow") {
+      if (!Idle.systems.inventory.count(Idle.state.slots, "bucket")) {
+        Idle.state.pushLog({ kind: "full", text: "You need a bucket to milk a cow." });
+        this.render();
+        return;
+      }
+      this.stopOther("gather");
+      Idle.state.activity = { profession: "farming", id: "milk_cow", seconds: 2.4 };
+      Idle.state.running = true;
+      this.tickStartedAt = performance.now();
+      Idle.state.pushLog({ kind: "pick", text: "Milking a cow." });
+      this.render();
+      return;
+    }
     const tree = Idle.data.woodcutting.trees.find((t) => t.id === id);
-    if (!tree) return;
-    if ((Idle.state.skills.woodcutting.level || 1) < tree.level) {
-      Idle.state.pushLog({ kind: "full", text: `Need Woodcutting ${tree.level}.` });
+    if (tree) {
+      if ((Idle.state.skills.woodcutting.level || 1) < tree.level) {
+        Idle.state.pushLog({ kind: "full", text: `Need Woodcutting ${tree.level}.` });
+        this.render();
+        return;
+      }
+      if (!Idle.professions.woodcutting.hasAxe(Idle.state.slots)) {
+        Idle.state.pushLog({ kind: "full", text: "You need an axe to chop trees." });
+        this.render();
+        return;
+      }
+      this.stopOther("gather");
+      Idle.state.tree = { hp: tree.hp };
+      Idle.state.activity = { profession: "woodcutting", id };
+      Idle.state.running = true;
+      Idle.state.screen = "woodcutting";
+      this.tickStartedAt = performance.now();
+      Idle.state.pushLog({ kind: "pick", text: `Chopping ${tree.name}.` });
       this.render();
       return;
     }
-    if (!Idle.professions.woodcutting.hasAxe(Idle.state.slots)) {
-      Idle.state.pushLog({ kind: "full", text: "You need an axe to chop trees." });
+    const rock = Idle.professions.mining.nodeById(id);
+    if (rock) {
+      if ((Idle.state.skills.mining.level || 1) < rock.level) {
+        Idle.state.pushLog({ kind: "full", text: `Need Mining ${rock.level}.` });
+        this.render();
+        return;
+      }
+      this.stopOther("gather");
+      Idle.state.active.mining = id;
+      Idle.state.activity = { profession: "mining", id };
+      Idle.state.running = true;
+      Idle.state.screen = "mining";
+      this.tickStartedAt = performance.now();
+      Idle.state.pushLog({ kind: "pick", text: `Mining ${rock.name}.` });
       this.render();
       return;
     }
-    this.stopOther("gather");
-    Idle.state.tree = { hp: tree.hp };
-    Idle.state.activity = { profession: "woodcutting", id };
-    Idle.state.running = true;
-    Idle.state.screen = "woodcutting";
-    this.tickStartedAt = performance.now();
-    Idle.state.pushLog({ kind: "pick", text: `Chopping ${tree.name}.` });
-    this.render();
   },
 
   talkNpc(id) {
@@ -2548,6 +2759,7 @@ Idle.ui = {
       { id: "crafting", name: "Crafting", note: "Spinning wheel and stations" },
       { id: "thieving", name: "Thieving", note: "Pickpocket and stalls" },
       { id: "agility", name: "Agility", note: "Rooftop courses" },
+      { id: "runecrafting", name: "Runecrafting", note: "Craft runes at altars" },
       ...(Idle.state.quests && Idle.state.quests.pandemonium ? [{ id: "sailing", name: "Sailing", note: "Rafts and the Pandemonium" }] : []),
       { id: "altar", name: "Altar", note: "Sacrifice fish for Prayer" },
     ];
@@ -2674,6 +2886,7 @@ Idle.ui = {
       { id: "woodchuckers_wood", title: "Woodchucker's Wood" },
       { id: "cave_explorer", title: "Cave Explorer" },
       { id: "goblin_slayer", title: "Goblin Slayer" },
+      { id: "goblin_troubles", title: "Goblin Troubles" },
       { id: "imp_catcher", title: "Imp Catcher" },
       { id: "witchs_potion", title: "Witch's Potion" },
       { id: "pirates_treasure", title: "Pirate's Treasure" },
@@ -2771,6 +2984,16 @@ Idle.ui = {
             ${slayerDone ? `<p class="hint">Finished. +300 Slayer xp, 2 quest points.</p>` : caveDone ? `<button class="btn" data-action="turnin-slayer"${slayerReady ? "" : " disabled"}>Turn in</button>` : `<p class="hint">Finish Cave Explorer first.</p>`}
           </div>` : ""}`;
       }
+      if (quest.id === "goblin_troubles") {
+        const done = Idle.state.quests.goblin_troubles;
+        const needs = Idle.data.quests.goblin_troubles.needs;
+        const ready = needs.every((need) => Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty);
+        return `<button class="pill ${gold}" data-action="open-goblin-troubles">Goblin Troubles</button>
+          ${opened ? `<div class="quest-sheet">
+            ${needs.map((need) => `<p class="${Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty ? "have" : "need"}">${need.qty} ${need.name}</p>`).join("")}
+            ${done ? `<p class="hint">Finished. Unlocked Cobbled Guard helm.</p>` : `<button class="btn" data-action="return-delegator">${ready ? "Return to Head Goblin Delegator" : "Talk to Head Goblin Delegator"}</button>`}
+          </div>` : ""}`;
+      }
       if (quest.id === "imp_catcher") {
         const done = Idle.state.quests.imp_catcher;
         const beads = ["black_bead", "yellow_bead", "red_bead", "white_bead"];
@@ -2832,7 +3055,7 @@ Idle.ui = {
   combatStats() {
     const skills = Idle.state.combatSkills;
     const names = ["attack", "strength", "defence", "ranged", "magic", "prayer", "hitpoints"];
-    const professions = ["mining", "smithing", "cooking", "fishing", "crafting", "fletching", "sailing", "woodcutting", "slayer", "firemaking", "farming", "thieving", "agility"];
+    const professions = ["mining", "smithing", "cooking", "fishing", "crafting", "fletching", "sailing", "woodcutting", "slayer", "firemaking", "farming", "thieving", "agility", "runecrafting"];
     return `
       <section class="panel">
         <div class="screen-head">
@@ -3127,6 +3350,47 @@ Idle.ui = {
     this.render();
   },
 
+  talkGoblinDelegator() {
+    if (Idle.state.quests.goblin_troubles) {
+      Idle.state.pushLog({ kind: "pick", text: "Head Goblin Delegator has what he needs." });
+      this.render();
+      return;
+    }
+    Idle.state.dialogue = {
+      npc: "Head Goblin Delegator",
+      text: "This is quite a feat of strength to accomplish, bring me 1 bronze dagger, 1 bronze sword, 3 bronze full helms.",
+      choices: [
+        { label: "Accept", action: "accept-goblin-troubles" },
+        { label: "Decline", action: "decline-goblin-troubles" },
+      ],
+    };
+    this.render();
+  },
+
+  acceptGoblinTroubles() {
+    Idle.state.dialogue = null;
+    Idle.state.questProgress = Idle.state.questProgress || {};
+    Idle.state.questProgress.goblin_troubles = true;
+    Idle.state.pushLog({ kind: "pick", text: "Accepted Goblin Troubles." });
+    this.render();
+  },
+
+  declineGoblinTroubles() {
+    Idle.state.dialogue = null;
+    Idle.state.pushLog({ kind: "pick", text: "Declined." });
+    this.render();
+  },
+
+  returnToDelegator() {
+    const have = Idle.data.quests.goblin_troubles.needs.every((need) => Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty);
+    this.stopOther();
+    Idle.state.place = "walking";
+    Idle.state.leave = { steps: [{ label: "Walking to Head Goblin Delegator", travel: 0 }], step: 0, startedAt: performance.now(), next: { place: "lumbridge", quest: "goblin_troubles", turnIn: have }, town: false };
+    Idle.state.screen = "town";
+    Idle.state.pushLog({ kind: "pick", text: "At Head Goblin Delegator." });
+    this.render();
+  },
+
   startImpCatcher() {
     if (Idle.state.quests.imp_catcher) {
       Idle.state.pushLog({ kind: "pick", text: "Wizard Mizgog has his beads." });
@@ -3192,11 +3456,15 @@ Idle.ui = {
     if (quest.rewardItem) Idle.systems.inventory.add(Idle.state.slots, quest.rewardItem, 1);
     if (quest.gold) Idle.state.gold = (Idle.state.gold || 0) + quest.gold;
     const points = quest.points || 1;
-    const lines = [`${points} Quest Point${points > 1 ? "s" : ""}`];
-    if (quest.rewardXp) Object.entries(quest.rewardXp).forEach(([skill, amount]) => lines.push(`${amount} ${skill} xp`));
-    if (quest.gold) lines.push(`${quest.gold} gp`);
-    if (quest.rewardItem) lines.push(quest.rewardItem.replaceAll("_", " "));
-    if (quest.passive) lines.push("Cook-o-matic 100");
+    const lines = questId === "goblin_troubles"
+      ? ["1 Quest Point", "Learned how to craft a new anvil recipe."]
+      : [`${points} Quest Point${points > 1 ? "s" : ""}`];
+    if (questId !== "goblin_troubles") {
+      if (quest.rewardXp) Object.entries(quest.rewardXp).forEach(([skill, amount]) => lines.push(`${amount} ${skill} xp`));
+      if (quest.gold) lines.push(`${quest.gold} gp`);
+      if (quest.rewardItem) lines.push(quest.rewardItem.replaceAll("_", " "));
+      if (quest.passive) lines.push("Cook-o-matic 100");
+    }
     Idle.state.questComplete = { name: quest.name, lines };
     Idle.state.pushLog({ kind: "level", text: `${quest.name} complete.` });
     Idle.systems.save.write(Idle.state);
@@ -3378,12 +3646,15 @@ Idle.ui = {
 
   flee() {
     if (!Idle.state.fight || Idle.state.fight.phase !== "fight") return;
-    if (Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil) return;
-    Idle.state.fleeUntil = Date.now() + 4000;
-    Idle.state.fight = null;
-    Idle.state.activity = null;
-    Idle.state.running = false;
-    Idle.state.pushLog({ kind: "pick", text: "You fled. 4 seconds before you can fight again." });
+    if (Idle.state.fight.fleeing) {
+      Idle.state.fight.fleeing = false;
+      Idle.state.pushLog({ kind: "pick", text: "Stopped fleeing." });
+      this.render();
+      return;
+    }
+    Idle.state.fight.fleeing = true;
+    Idle.state.fight.fleeStarted = performance.now();
+    Idle.state.pushLog({ kind: "pick", text: "Attempting to flee." });
     this.render();
   },
 
@@ -3559,6 +3830,7 @@ Idle.ui = {
     if (Idle.state.screen === "fletching") return this.fletching();
     if (Idle.state.screen === "thieving") return this.thieving();
     if (Idle.state.screen === "agility") return this.agility();
+    if (Idle.state.screen === "runecrafting") return this.runecrafting();
     if (Idle.state.screen === "fishing") return this.fishing();
     if (Idle.state.screen === "altar") return this.altar();
     if (Idle.state.screen === "equipment") return this.equipment();
@@ -3580,7 +3852,9 @@ Idle.ui = {
   mining() {
     const skill = Idle.state.skills.mining;
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
-    const nodes = Idle.professions.mining.nodes();
+    const town = Idle.data.towns[Idle.state.town] || Idle.data.towns.lumbridge;
+    const allowed = new Set((town.gather || []).map((g) => g.id));
+    const nodes = Idle.professions.mining.nodes().filter((n) => allowed.has(n.id));
     return `
       <section class="panel">
         <div class="screen-head">
@@ -3710,7 +3984,7 @@ Idle.ui = {
     const skill = Idle.state.skills.smithing;
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
     const metal = this.anvilMetal || "bronze";
-    const items = Idle.professions.anvil.forMetal(metal);
+    const items = Idle.professions.anvil.forMetal(metal).filter((item) => !item.quest || Idle.state.quests[item.quest]);
     return `
       <section class="panel">
         <div class="screen-head">
@@ -3765,7 +4039,7 @@ Idle.ui = {
     if (!Idle.professions.anvil.canMake(skill, item)) return;
     const missing = Object.entries(item.cost).some(([id, qty]) => Idle.systems.inventory.count(Idle.state.slots, id) < qty);
     if (missing) {
-      Idle.state.pushLog({ kind: "full", text: `Missing bars for ${item.name}.` });
+      Idle.state.pushLog({ kind: "full", text: `Missing materials for ${item.name}: ${Object.entries(item.cost).map(([id, qty]) => `${qty} ${id.replaceAll("_", " ")}`).join(", ")}.` });
       this.render();
       return;
     }
@@ -3919,6 +4193,9 @@ Idle.ui = {
     this.root.querySelectorAll("[data-course]").forEach((el) => {
       el.addEventListener("click", () => this.startCourse(el.dataset.course));
     });
+    this.root.querySelectorAll("[data-rc]").forEach((el) => {
+      el.addEventListener("click", () => this.startRunecraft(el.dataset.rc));
+    });
     this.root.querySelectorAll("[data-firecook]").forEach((el) => {
       el.addEventListener("click", () => this.cookOnFire(el.dataset.firecook));
     });
@@ -3946,11 +4223,13 @@ Idle.ui = {
         if (action === "open-fletching") this.setScreen("fletching");
         if (action === "open-thieving") this.setScreen("thieving");
         if (action === "open-agility") this.setScreen("agility");
+        if (action === "open-runecrafting") this.setScreen("runecrafting");
         if (action === "talk-aubury") this.talkAubury();
         if (action === "plant-flax") this.plantFlax();
         if (action === "harvest-flax") this.harvestFlax();
         if (action === "open-fishing") this.setScreen("fishing");
         if (action === "open-altar") this.setScreen("altar");
+        if (action === "recharge-prayer") this.rechargePrayer();
         if (action === "open-stats") this.setScreen("stats");
         if (action === "open-bestiary") this.setScreen("bestiary");
         if (action === "open-quests") this.setScreen("quests");
@@ -4002,6 +4281,10 @@ Idle.ui = {
         if (action === "open-quests") this.setScreen("quests");
         if (action === "open-town") this.setScreen("town");
         if (action === "talk-cook") this.talkNpc("cook");
+        if (action === "talk-head_goblin_delegator") this.talkGoblinDelegator();
+        if (action === "accept-goblin-troubles") this.acceptGoblinTroubles();
+        if (action === "decline-goblin-troubles") this.declineGoblinTroubles();
+        if (action === "return-delegator") this.returnToDelegator();
         if (action === "talk-fred") this.talkNpc("fred");
         if (action === "talk-cassius") this.talkNpc("cassius");
         if (action === "talk-doric") this.talkNpc("doric");
@@ -4030,6 +4313,7 @@ Idle.ui = {
         if (action === "open-wood") { this.questOpen = this.questOpen === "woodchuckers_wood" ? null : "woodchuckers_wood"; this.render(); }
         if (action === "open-cave") { this.questOpen = this.questOpen === "cave_explorer" ? null : "cave_explorer"; this.render(); }
         if (action === "open-slayer") { this.questOpen = this.questOpen === "goblin_slayer" ? null : "goblin_slayer"; this.render(); }
+        if (action === "open-goblin-troubles") { this.questOpen = this.questOpen === "goblin_troubles" ? null : "goblin_troubles"; this.render(); }
         if (action === "open-imp") { this.questOpen = this.questOpen === "imp_catcher" ? null : "imp_catcher"; this.render(); }
         if (action === "start-imp") this.startImpCatcher();
         if (action === "turnin-fishers") this.turnInSimple("fishers_friend", "raw_shrimp", 20, "small_fishing_net");
@@ -4099,6 +4383,10 @@ Idle.ui = {
           this.settingsOpen = !this.settingsOpen;
           this.render();
         }
+        if (action === "toggle-buffs") {
+          this.buffsOpen = !this.buffsOpen;
+          this.render();
+        }
         if (action === "reset") this.reset();
       });
     });
@@ -4160,6 +4448,7 @@ Idle.ui = {
     this.root.querySelectorAll("[data-style]").forEach((el) => {
       el.addEventListener("click", () => {
         Idle.state.style = el.dataset.style;
+        if (Idle.state.fight) Idle.state.fight.fleeing = false;
         Idle.systems.save.write(Idle.state);
         this.render();
       });

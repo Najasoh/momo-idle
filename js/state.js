@@ -120,7 +120,15 @@ Idle.boot = function boot() {
   if (!Idle.state.skills.farming) Idle.state.skills.farming = Idle.professions.farming.createSkill();
   if (!Idle.state.skills.fletching) Idle.state.skills.fletching = Idle.professions.fletching.createSkill();
   if (!Idle.state.skills.thieving) Idle.state.skills.thieving = Idle.professions.thieving.createSkill();
-  if (!Idle.state.skills.agility) Idle.state.skills.agility = Idle.professions.agility.createSkill();
+  if (!Idle.state.skills.runecrafting) Idle.state.skills.runecrafting = Idle.professions.runecrafting.createSkill();
+  if (saved.skills && saved.skills.runecrafting) {
+    Idle.state.skills.runecrafting = {
+      level: saved.skills.runecrafting.level || 1,
+      xp: saved.skills.runecrafting.xp || 0,
+      xpToNext: Idle.config.baseXpToLevel,
+    };
+    Idle.systems.xp.sync(Idle.state.skills.runecrafting);
+  }
   if (saved.skills && saved.skills.thieving) {
     Idle.state.skills.thieving = {
       level: saved.skills.thieving.level || 1,

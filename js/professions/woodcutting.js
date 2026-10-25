@@ -88,11 +88,16 @@ Idle.professions.woodcutting = {
       return { kind: "locked", text: "You need an axe to chop trees." };
     }
     const axe = this.bestAxe(state.slots);
-    const dmg = axe.wc * (Math.random() < 0.33 ? 2 : 1);
-    const tree = state.tree || { hp: node.hp };
-    tree.hp -= dmg;
-    state.tree = tree;
-    if (tree.hp > 0) return { kind: "mine", text: `Chopped the tree. ${tree.hp} hp left.` };
+    const needed = node.id === "oak" ? 2 : node.id === "willow" ? 4 : node.id === "yew" ? 8 : 1;
+    if (!axe || axe.wc < needed) {
+      state.activity = null;
+      return { kind: "locked", text: `You need a better axe for ${node.name}.` };
+    }
+    let fail = 0.30;
+    if (skill.level > 55) fail = Math.max(0.05, 0.30 - (skill.level - 55) * 0.005);
+    if (Math.random() < fail) {
+      return { kind: "mine", text: `Missed the chop.` };
+    }
     const drop = node.id === "oak" ? this.rollOak() : node.id === "willow" ? this.rollWillow() : node.id === "yew" ? this.rollYew() : (node.result || "logs");
     const stored = Idle.systems.inventory.add(state.slots, drop, 1);
     if (!stored) {
@@ -100,7 +105,6 @@ Idle.professions.woodcutting = {
       return { kind: "full", text: "Inventory is full. Chopping stopped." };
     }
     const levels = Idle.systems.xp.grant(skill, node.xp);
-    state.tree = { hp: node.hp };
     state.activity.phase = "respawn";
     state.activity.until = performance.now() + (1 + Math.random() * 2) * 1000;
     let text = `Cut a tree (+${node.xp} Woodcutting xp).`;

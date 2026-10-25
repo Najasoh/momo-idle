@@ -14,6 +14,7 @@ Idle.data.anvilItems = [
   { id: "bronze_scimitar", name: "Bronze scimitar", metal: "bronze", level: 5, xp: 25, sell: 73, respawn: 3, cost: { bronze_bar: 2 }, swatch: "#b87333", equip: "weapon", hands: 1 },
   { id: "bronze_longsword", name: "Bronze longsword", metal: "bronze", level: 6, xp: 25, sell: 67, respawn: 3, cost: { bronze_bar: 2 }, swatch: "#b87333", equip: "weapon", hands: 1 },
   { id: "bronze_full_helm", name: "Bronze full helm", metal: "bronze", level: 7, xp: 25, sell: 83, respawn: 3, cost: { bronze_bar: 2 }, swatch: "#b87333", equip: "helm" },
+  { id: "cobbled_guard_helm", name: "Cobbled Guard helm", metal: "bronze", level: 5, xp: 150, sell: 150, respawn: 3, cost: { bronze_full_helm: 1, goblin_mail_scrap: 2, leather: 1 }, swatch: "#b87333", equip: "helm", quest: "goblin_troubles" },
   { id: "bronze_sq_shield", name: "Bronze sq shield", metal: "bronze", level: 8, xp: 25, sell: 34, respawn: 3, cost: { bronze_bar: 2 }, swatch: "#b87333", equip: "shield" },
   { id: "bronze_warhammer", name: "Bronze warhammer", metal: "bronze", level: 9, xp: 37.5, sell: 42, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "weapon", hands: 1 },
   { id: "bronze_battleaxe", name: "Bronze battleaxe", metal: "bronze", level: 10, xp: 37.5, sell: 76, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "weapon", hands: 1 },

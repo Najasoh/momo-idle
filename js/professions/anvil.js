@@ -34,7 +34,8 @@ Idle.professions.anvil = {
     const missing = Object.entries(item.cost).some(([id, qty]) => Idle.systems.inventory.count(state.slots, id) < qty);
     if (missing) {
       state.activity = null;
-      return { kind: "full", text: `Missing bars for ${item.name}. Anvil stopped.` };
+      const need = Object.entries(item.cost).map(([id, qty]) => `${qty} ${id.replaceAll("_", " ")}`).join(", ");
+      return { kind: "full", text: `Missing materials for ${item.name}: ${need}.` };
     }
     if (Idle.systems.inventory.findStack(state.slots, item.id) === -1 && Idle.systems.inventory.firstEmpty(state.slots) === -1) {
       state.activity = null;
