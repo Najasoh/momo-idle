@@ -38,11 +38,16 @@ Idle.ui = {
       this.paintFishTravel(now);
       this.paintQuestRun(now);
       this.paintCampfire(now);
+      this.refillDiscover(now);
       this.paintAmbience(now);
       this.syncGeSound();
       this.syncWalkSound();
       if (Idle.state.bury) return;
       if (Idle.state.fight || Idle.state.leave || Idle.state.exit || Idle.state.altar || Idle.state.questRun || (Idle.state.activity && Idle.state.activity.phase === "travel") || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
+      if (Idle.state.activity && Idle.state.activity.profession === "discover") {
+        this.paintDiscover(now);
+        return;
+      }
       if (!Idle.state.running || !Idle.state.activity) return;
       if (Idle.state.activity && Idle.state.activity.id === "milk_cow") {
         if (now - this.tickStartedAt < 2400) return;
@@ -105,7 +110,7 @@ Idle.ui = {
       if (result.kind !== "idle") Idle.state.pushLog(result);
       this.syncActivitySound();
       Idle.systems.save.write(Idle.state);
-      this.refreshLive();
+      this.render();
     };
     this.frame = requestAnimationFrame(loop);
   },
@@ -120,7 +125,7 @@ Idle.ui = {
     const label = this.root && this.root.querySelector("[data-tick-label]");
     if (!fill) return;
     if (Idle.state.bury) return;
-    if (Idle.state.fight || Idle.state.leave || Idle.state.questRun || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
+    if (Idle.state.fight || Idle.state.leave || Idle.state.questRun || Idle.state.activity && Idle.state.activity.profession === "discover" || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
     const job = Idle.state.activity;
     const profession = job ? Idle.professions[job.profession] : null;
     const node = profession ? profession.nodeById(job.id) : null;
@@ -564,8 +569,7 @@ Idle.ui = {
 
   refreshLive() {
     const skill = this.shownSkill();
-    const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
-    const xpText = `${skill.name} ${skill.level} · ${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp`;
+    const xpText = skill.multi ? skill.multi.map((s) => `${s.name} ${s.level}`).join(" | ") : `${skill.name} ${skill.level}`;
     const xpLabel = this.root.querySelector("[data-xp-label]");
     if (xpLabel) xpLabel.textContent = xpText;
     this.root.querySelectorAll("[data-xp-fill]").forEach((el) => {
@@ -609,9 +613,19 @@ Idle.ui = {
 
   shownSkill() {
     const map = { fishing: "fishing", cooking: "cooking", smithing: "smithing", anvil: "smithing", crafting: "crafting", woodcutting: "woodcutting", thieving: "thieving", agility: "agility", farming: "farming", fletching: "fletching", runecrafting: "runecrafting" };
-    const profession = map[Idle.state.screen] || "mining";
-    const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching", runecrafting: "Runecrafting" };
-    return { name: names[profession], ...Idle.state.skills[profession] };
+    if (map[Idle.state.screen]) {
+      const profession = map[Idle.state.screen];
+      const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching", runecrafting: "Runecrafting" };
+      const skill = Idle.state.skills[profession];
+      return { name: names[profession], level: skill.level, pct: Math.floor((skill.xp / skill.xpToNext) * 100) };
+    }
+    const style = Idle.state.style || "accurate";
+    const cs = Idle.state.combatSkills;
+    const line = (id, name) => ({ name, level: cs[id].level, pct: Math.floor((cs[id].xp / cs[id].xpToNext) * 100) });
+    if (style === "aggressive") return line("strength", "Strength");
+    if (style === "controlled") return { multi: [line("attack", "Attack"), line("strength", "Strength"), line("defence", "Defence")] };
+    if (style === "defensive") return { multi: [line("defence", "Defence"), line("hitpoints", "Hitpoints")] };
+    return line("attack", "Attack");
   },
 
   currentNode() {
@@ -1183,7 +1197,6 @@ Idle.ui = {
         <div class="screen-head">
           <div>
             <p class="kicker">Stations</p>
-            <h1>Crafting</h1>
           </div>
           <button class="text-btn" data-action="hub">Back to menu</button>
         </div>
@@ -1198,7 +1211,8 @@ Idle.ui = {
         <div class="wheel" data-wheel>
           ${recipes.map((recipe) => {
             const active = Idle.state.activity && Idle.state.activity.profession === "crafting" && Idle.state.activity.id === recipe.id;
-            return `<button class="node wheel-item ${active ? "active" : ""}" data-craft="${recipe.id}"><span class="swatch">${this.iconHtml(recipe.id, recipe)}</span><span class="node-copy"><span class="node-name">${recipe.name}</span><span class="node-stat">Crafting ${recipe.level} · ${Object.entries(recipe.cost).map(([id, qty]) => `${id.replaceAll("_", " ")} +${qty}`).join(" · ")}</span></span></button>`;
+            const cost = Object.entries(recipe.cost).map(([id, qty]) => `${id.replaceAll("_", " ")} x${qty}`).join(", ");
+            return `<button class="node wheel-item ${active ? "active" : ""}" data-craft="${recipe.id}"><span class="swatch">${this.iconHtml(recipe.id, recipe)}</span><span class="node-copy"><span class="node-name">${recipe.name}</span><span class="node-stat">Lvl ${recipe.level} · ${cost}</span></span></button>`;
           }).join("")}
         </div>
       </section>
@@ -1780,8 +1794,11 @@ Idle.ui = {
   },
 
   styleButtons() {
-    const attack = Idle.systems.combat.attackName();
-    return `<div class="metal-tabs style-tabs">${Idle.systems.combat.styles().map((name) => `<button class="tab ${Idle.state.style === name ? "on" : ""}" data-style="${name}">${attack}; ${name}</button>`).join("")}<button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button></div>`;
+    const weapon = Idle.systems.combat.weapon();
+    const styles = weapon ? weapon.styles : ["accurate", "aggressive", "defensive"];
+    const names = weapon && weapon.styleNames ? weapon.styleNames : styles;
+    const attacks = weapon && weapon.styleNames ? ["slash", "slash", "stab", "slash"] : [Idle.systems.combat.attackName()];
+    return `<div class="metal-tabs style-tabs">${styles.map((name, i) => `<button class="tab ${Idle.state.style === name ? "on" : ""}" data-style="${name}">${names[i] || name} · ${attacks[i] || attacks[0]}; ${name}</button>`).join("")}<button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button></div>`;
   },
 
   combatBars(mob) {
@@ -1821,6 +1838,14 @@ Idle.ui = {
       tracker = `<div class="tickbar"><div class="tickbar-label"><span data-tick-label>Haggling · ${left}s</span></div><div class="tickbar-track"><span data-tick-fill style="width:${Math.min(100, ((elapsed % order.each) / order.each) * 100)}%"></span></div></div>`;
     }
     if (Idle.state.altar) tracker = `<div class="tickbar"><div class="tickbar-label"><span data-tick-label>Altar</span></div><div class="tickbar-track"><span data-tick-fill style="width:0%"></span></div></div>`;
+    if (Idle.state.activity && Idle.state.activity.profession === "discover") {
+      const act = Idle.state.activity;
+      const total = act.phase === "find" ? 15 : act.phase === "walk" ? 5 : 1;
+      const elapsed = Math.max(0, (performance.now() - (act.until - total * 1000)) / 1000);
+      const left = Math.max(0, Math.ceil((act.until - performance.now()) / 1000));
+      const label = act.phase === "find" ? "Discovering" : act.phase === "walk" ? "Walking" : "Picking up";
+      tracker = `<div class="tickbar"><div class="tickbar-label"><span data-tick-label>${label} · ${left}s</span></div><div class="tickbar-track"><span data-tick-fill style="width:${Math.min(100, (elapsed / total) * 100)}%"></span></div></div>`;
+    }
     if (Idle.state.campfire && Idle.state.campfire.phase !== "ask") {
       const fire = Idle.state.campfire;
       const fireElapsed = (performance.now() - fire.startedAt) / 1000;
@@ -1841,7 +1866,7 @@ Idle.ui = {
             <span data-hp-label>${hpNow} / ${hpMax} hp</span>
           </div>
           <div class="status">
-            <span class="pill" data-xp-label>${skill.name} ${skill.level} · ${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</span>
+            <span class="pill" data-xp-label>${skill.multi ? skill.multi.map((s) => `${s.name} ${s.level}`).join(" | ") : `${skill.name} ${skill.level}`}</span>
             <button class="pill" data-action="toggle-buffs">Buffs</button>
           </div>
         </div>
@@ -1901,7 +1926,7 @@ Idle.ui = {
   townScreen() {
     const town = Idle.data.towns[Idle.state.town] || Idle.data.towns.lumbridge;
     const others = Object.values(Idle.data.towns).filter((entry) => entry.id !== town.id);
-    const open = this.townOpen || {};
+    const open = this.townOpen || { discoverables: true };
     const section = (id, title, body) => `<button class="kicker" data-action="toggle-${id}" style="background:none;border:none;cursor:pointer;text-align:left">${open[id] ? "▾" : "▸"} ${title}</button>${open[id] ? body : ""}`;
     const npcLine = (npc) => {
       const done = Idle.state.quests && Idle.state.quests[npc.quest];
@@ -2220,6 +2245,8 @@ Idle.ui = {
       { id: "spade", stock: 5, restock: 60, price: 3 },
       { id: "hammer", stock: 5, restock: 60, price: 1 },
       { id: "flax_seed", stock: 10, restock: 30, price: 11 },
+      { id: "needle", stock: 5, restock: 60, price: 106 },
+      { id: "thread", stock: 10, restock: 30, price: 7 },
     ];
     const catalog = Idle.systems.inventory.catalog();
     const now = Date.now();
@@ -2550,7 +2577,7 @@ Idle.ui = {
             const locked = skill.level < recipe.level;
             const active = Idle.state.activity && Idle.state.activity.profession === "fletching" && Idle.state.activity.id === recipe.id;
             const cost = Object.entries(recipe.cost).map(([id, qty]) => `${id.replaceAll("_", " ")} +${qty}`).join(" · ");
-            return `<button class="node wheel-item ${active ? "active" : ""} ${locked ? "locked" : ""}" data-fletch="${recipe.id}" ${locked ? "disabled" : ""}><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${recipe.name}</span><span class="node-stat" style="display:inline">Fletching ${recipe.level} · ${cost}</span></span></button>`;
+            return `<button class="node wheel-item ${active ? "active" : ""} ${locked ? "locked" : ""}" data-fletch="${recipe.id}" ${locked ? "disabled" : ""}><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${recipe.name}</span><span class="node-stat" style="display:inline">Fletching ${recipe.level}</span></span></button>`;
           }).join("")}
         </div>
       </section>
@@ -2658,6 +2685,173 @@ Idle.ui = {
     Idle.state.leave = { steps: [{ label: `Walking to ${dest.name}`, travel: seconds }], step: 0, startedAt: performance.now(), next: { place: id, screen: "town" }, town: false };
     Idle.state.screen = "town";
     Idle.state.pushLog({ kind: "pick", text: `Walking to ${dest.name}. ${seconds} seconds.` });
+    this.render();
+  },
+
+  hoteiShop() {
+    Idle.state.hotei = Idle.state.hotei || {};
+    const stock = [
+      { id: "bowl", stock: 1 }, { id: "bronze_arrow", stock: 1 }, { id: "bronze_dagger", stock: 1 },
+      { id: "bronze_pickaxe", stock: 1 }, { id: "bucket", stock: 1 }, { id: "cabbage", stock: 1 },
+      { id: "jug", stock: 2 }, { id: "knife", stock: 1 }, { id: "leather_boots", stock: 1 },
+      { id: "logs", stock: 4 }, { id: "mind_rune", stock: 1 }, { id: "pot", stock: 1 },
+      { id: "egg", stock: 6 }, { id: "iron_dagger", stock: 1 }, { id: "onion", stock: 1 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.hotei[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + 50000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + 50000;
+      Idle.state.hotei[item.id] = entry;
+    });
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Vendor</p><h1>Monk Hotei</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <p class="hint">Everything is 5 coins. He does not buy.</p>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.hotei[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            return `<button class="pill" data-action="buy-hotei" data-item="${item.id}">${name} (${entry.left}) · 5 coins</button>`;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  buyHotei(id) {
+    const entry = Idle.state.hotei && Idle.state.hotei[id];
+    if (!entry || entry.left <= 0) {
+      Idle.state.pushLog({ kind: "full", text: "Out of stock." });
+      this.render();
+      return;
+    }
+    if ((Idle.state.gold || 0) < 5) {
+      Idle.state.pushLog({ kind: "full", text: "You need 5 coins." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    Idle.state.gold -= 5;
+    entry.left -= 1;
+    if (!entry.next) entry.next = Date.now() + 50000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  refillDiscover(now) {
+    const town = Idle.data.towns[Idle.state.town];
+    if (!town || !town.discoverables) return;
+    Idle.state.discoverRefill = Idle.state.discoverRefill || {};
+    Idle.state.discoverStock = Idle.state.discoverStock || {};
+    town.discoverables.forEach((entry) => {
+      const key = `${town.id}:${entry.id}`;
+      if (Idle.state.discoverStock[key] === undefined) return;
+      if (Idle.state.discoverStock[key] >= entry.stock) return;
+      if (!Idle.state.discoverRefill[key]) Idle.state.discoverRefill[key] = now + 55000;
+      if (now >= Idle.state.discoverRefill[key]) {
+        Idle.state.discoverStock[key] += 1;
+        Idle.state.discoverRefill[key] = now + 55000;
+      }
+    });
+  },
+
+  paintDiscover(now) {
+    const act = Idle.state.activity;
+    if (!act || act.profession !== "discover") return;
+    const total = act.phase === "find" ? 15000 : act.phase === "walk" ? 5000 : 1000;
+    const elapsed = Math.max(0, now - (act.until - total));
+    const left = Math.max(0, Math.ceil((act.until - now) / 1000));
+    this.root.querySelectorAll("[data-tick-fill]").forEach((bar) => { bar.style.width = `${Math.min(100, (elapsed / total) * 100)}%`; });
+    this.root.querySelectorAll("[data-tick-label]").forEach((el) => { el.textContent = `${act.phase === "find" ? "Discovering" : act.phase === "walk" ? "Walking" : "Picking up"} · ${left}s`; });
+    if (now < act.until) {
+      if (!this.discoverRender || now - this.discoverRender > 500) {
+        this.discoverRender = now;
+        this.render();
+      }
+      return;
+    }
+    const town = Idle.data.towns[Idle.state.town];
+    const entry = town.discoverables.find((d) => d.id === act.id);
+    if (!entry) return;
+    const key = `${town.id}:${act.id}`;
+    if (act.phase === "find") {
+      Idle.state.discovered = Idle.state.discovered || {};
+      Idle.state.discovered[key] = true;
+      Idle.state.discoverStock = Idle.state.discoverStock || {};
+      Idle.state.discoverStock[key] = entry.stock;
+      Idle.state.discoverRefill = Idle.state.discoverRefill || {};
+      Idle.state.discoverRefill[key] = now + 55000;
+      Idle.state.activity = null;
+      Idle.state.running = false;
+      Idle.state.pushLog({ kind: "pick", text: `Discovered ${entry.name}.` });
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
+    if (act.phase === "walk") {
+      act.phase = "pick";
+      act.until = now + 1000;
+      this.render();
+      return;
+    }
+    Idle.state.discoverStock = Idle.state.discoverStock || {};
+    const have = Idle.state.discoverStock[key] !== undefined ? Idle.state.discoverStock[key] : entry.stock;
+    if (have > 0 && Idle.systems.inventory.add(Idle.state.slots, entry.id, 1)) {
+      Idle.state.discoverStock[key] = have - 1;
+      if (!Idle.state.discoverRefill[key]) Idle.state.discoverRefill[key] = now + 55000;
+      Idle.state.pushLog({ kind: "pick", text: `Picked up ${entry.name}.` });
+    }
+    Idle.state.activity = null;
+    Idle.state.running = false;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  startDiscover(id) {
+    const town = Idle.data.towns[Idle.state.town];
+    if (!town || !town.discoverables) {
+      Idle.state.pushLog({ kind: "full", text: "No discoverables here." });
+      this.render();
+      return;
+    }
+    const entry = town.discoverables.find((d) => d.id === id);
+    if (!entry) return;
+    const key = `${town.id}:${id}`;
+    Idle.state.discovered = Idle.state.discovered || {};
+    Idle.state.discoverStock = Idle.state.discoverStock || {};
+    Idle.state.discoverRefill = Idle.state.discoverRefill || {};
+    if (!Idle.state.discovered[key]) {
+      this.stopOther();
+      Idle.state.activity = { profession: "discover", id, phase: "find", until: performance.now() + 15000 };
+      Idle.state.running = true;
+      Idle.state.place = "town";
+      Idle.state.pushLog({ kind: "pick", text: "Discovering. 15 seconds." });
+      this.render();
+      return;
+    }
+    const have = Idle.state.discoverStock[key] !== undefined ? Idle.state.discoverStock[key] : entry.stock;
+    if (have <= 0) {
+      Idle.state.pushLog({ kind: "full", text: "Nothing there." });
+      this.render();
+      return;
+    }
+    this.stopOther();
+    Idle.state.activity = { profession: "discover", id, phase: "walk", until: performance.now() + 5000 };
+    Idle.state.running = true;
+    Idle.state.place = "town";
+    Idle.state.pushLog({ kind: "pick", text: `Walking to ${entry.name}. 5 seconds.` });
     this.render();
   },
 
@@ -2804,18 +2998,18 @@ Idle.ui = {
     const ranged = mob ? mob.rangedDefence : null;
     return `
       <section class="panel wide">
-        <div class="screen-head">
+        <div class="screen-head" style="display:flex;align-items:center;justify-content:space-between">
           <p class="kicker">Adventure</p>
-          <button class="text-btn" data-action="hub">Back</button>
+          <div style="display:flex;align-items:center;gap:12px">${this.wornGear()}<button class="text-btn" data-action="hub">Back</button></div>
         </div>
         <p data-death-label>${Idle.state.grave ? `Body at ${Idle.state.grave.mob}` : fight ? "" : "Select a mob to walk there."}</p>
         ${Idle.state.grave && Idle.state.grave.phase === "down" ? `<button class="btn" data-action="retrieve-body">Retrieve body · ${this.graveLeft()}</button>` : ""}
         ${Idle.state.grave && Idle.state.grave.phase === "choice" ? `<div class="choice-row"><span>Continue farming?</span><button class="btn" data-action="farm-yes">Yes</button><button class="btn" data-action="farm-no">No</button></div>` : ""}
         ${Idle.state.milkChoice ? `<div class="choice-row"><span>Start grinding cows?</span><button class="btn" data-action="milk-yes">Yes</button><button class="btn" data-action="milk-no">No</button></div>` : ""}
-        <div class="adventure-layout" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;gap:16px;width:100%">
-          <div class="adv-left" style="width:340px;flex:0 0 340px">${this.inventory()}</div>
-          <div class="adv-mid" style="width:280px;flex:0 0 280px">${this.wornGear()}<div class="combat-log" data-combat-log></div></div>
-          <div class="adv-stats" style="width:260px;flex:0 0 260px;display:flex;flex-direction:column;gap:16px">
+        <div class="adventure-layout" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:flex-start;gap:16px;width:auto">
+          <div class="adv-left" style="width:auto;flex:0 0 auto">${this.inventory()}</div>
+          <div class="adv-mid" style="width:auto;flex:0 0 auto"><div class="combat-log" data-combat-log></div></div>
+          <div class="adv-stats" style="width:240px;flex:0 0 240px;display:flex;flex-direction:column;gap:16px">
             <div class="mob-sheet">
               <p class="kicker">${mob ? `${mob.name} combat stats` : "Monster stats"}</p>
               ${mob ? `<p>${mob.hp} hp / ${mob.attack} atk / ${mob.strength} str / ${mob.defence} def / ${mob.magic} matk / ${mob.ranged} rng</p>
@@ -3839,6 +4033,7 @@ Idle.ui = {
     if (Idle.state.screen === "stats") return this.combatStats();
     if (Idle.state.screen === "bestiary") return this.bestiary();
     if (Idle.state.screen === "store") return this.store();
+    if (Idle.state.screen === "hotei") return this.hoteiShop();
     if (Idle.state.screen === "wydin") return this.wydinShop();
     if (Idle.state.screen === "bank") return this.bank();
     if (Idle.state.screen === "spellbook") return this.spellbook();
@@ -3894,8 +4089,7 @@ Idle.ui = {
         <span class="swatch">${this.iconHtml(node.id, node)}</span>
         <span class="node-copy">
           <span class="node-name">${node.name}</span>
-          <span class="node-stat">Requires Mining ${node.level} · ${this.formatXp(node.xp)} xp · ${node.sell} gp · ${this.formatSeconds(node.respawn)} respawn</span>
-          <span class="node-blurb">${locked ? `Locked until level ${node.level}` : node.blurb}</span>
+          <span class="node-stat">Mining ${node.level}</span>
         </span>
         <span class="node-state">${active ? "Farming" : locked ? "Locked" : "Mine"}</span>
       </button>
@@ -4028,7 +4222,7 @@ Idle.ui = {
         <span class="swatch">${this.iconHtml(item.id, item)}</span>
         <span class="cook-copy">
           <span class="node-name">${item.name}</span>
-          <span class="ingredient-row">${locked ? `Locked until Smithing ${item.level}` : `Smithing ${item.level} · ${cost}`}</span>
+          <span class="ingredient-row">Smithing ${item.level}</span>
         </span>
       </button>`;
   },
@@ -4102,7 +4296,7 @@ Idle.ui = {
         <span class="swatch">${this.iconHtml(bar.id, bar)}</span>
         <span class="cook-copy">
           <span class="node-name">${bar.name}</span>
-          <span class="ingredient-row">${locked ? `Locked until Smithing ${bar.level}` : `Smithing ${bar.level} · ${cost}`}</span>
+          <span class="ingredient-row">Smithing ${bar.level}</span>
         </span>
       </button>`;
   },
@@ -4161,6 +4355,7 @@ Idle.ui = {
             <button class="btn" data-action="eat" ${item && item.heal ? "" : "hidden"}>Eat · +${item && item.heal ? item.heal : 0}</button>
             <button class="btn" data-action="light-fire" ${item && item.id === "logs" ? "" : "hidden"}>Light campfire</button>
             <button class="btn" data-action="open-fletching" ${item && item.id === "knife" ? "" : "hidden"}>Fletching</button>
+            <button class="btn" data-action="open-needle" ${item && item.id === "needle" ? "" : "hidden"}>Craft</button>
             <button class="btn" data-action="open-treasure" ${item && item.id === "one_eyed_hectors_treasure" ? "" : "hidden"}>Open</button>
             <button class="btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
             <button class="btn" data-action="deposit" ${item && Idle.state.screen === "bank" ? "" : "hidden"}>Deposit</button>
@@ -4177,6 +4372,9 @@ Idle.ui = {
     });
     this.root.querySelectorAll("[data-choice]").forEach((el) => {
       el.addEventListener("click", () => this.choose(el.dataset.choice));
+    });
+    this.root.querySelectorAll("[data-discover]").forEach((el) => {
+      el.addEventListener("click", () => this.startDiscover(el.dataset.discover));
     });
     this.root.querySelectorAll("[data-town-mob]").forEach((el) => {
       el.addEventListener("click", () => this.startTownMob(el.dataset.townMob));
@@ -4221,6 +4419,7 @@ Idle.ui = {
         if (action === "open-firemaking") this.setScreen("firemaking");
         if (action === "open-farming") this.setScreen("farming");
         if (action === "open-fletching") this.setScreen("fletching");
+        if (action === "open-needle") { Idle.state.screen = "crafting"; this.craftStation = "needle"; this.render(); }
         if (action === "open-thieving") this.setScreen("thieving");
         if (action === "open-agility") this.setScreen("agility");
         if (action === "open-runecrafting") this.setScreen("runecrafting");
@@ -4304,6 +4503,8 @@ Idle.ui = {
         if (action === "talk-lumberjack_beave") this.talkNpc("lumberjack_beave");
     if (action === "talk-talsy") this.talkNpc("talsy");
     if (action === "talk-general_store") this.openStore();
+    if (action === "talk-monk_hotei") this.setScreen("hotei");
+    if (action === "buy-hotei") this.buyHotei(el.dataset.item);
     if (action === "buy-store") this.buyStore(el.dataset.item);
     if (action === "buy-wydin") this.buyWydin(el.dataset.item);
     if (action === "sell-store") this.sellStore(el.dataset.item);

@@ -20,6 +20,7 @@ Idle.data.anvilItems = [
   { id: "bronze_battleaxe", name: "Bronze battleaxe", metal: "bronze", level: 10, xp: 37.5, sell: 76, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "weapon", hands: 1 },
   { id: "bronze_chainbody", name: "Bronze chainbody", metal: "bronze", level: 11, xp: 37.5, sell: 45, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "body" },
   { id: "bronze_kiteshield", name: "Bronze kiteshield", metal: "bronze", level: 12, xp: 37.5, sell: 126, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "shield" },
+  { id: "bronze_claws", name: "Bronze claws", metal: "bronze", level: 13, xp: 25, sell: 202, respawn: 2.4, cost: { bronze_bar: 2 }, swatch: "#b87333", equip: "weapon", hands: 2 },
   { id: "bronze_2h_sword", name: "Bronze 2h sword", metal: "bronze", level: 14, xp: 37.5, sell: 142, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "weapon", hands: 2 },
   { id: "bronze_platelegs", name: "Bronze platelegs", metal: "bronze", level: 16, xp: 37.5, sell: 179, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "legs" },
   { id: "bronze_plateskirt", name: "Bronze plateskirt", metal: "bronze", level: 16, xp: 37.5, sell: 74, respawn: 3, cost: { bronze_bar: 3 }, swatch: "#b87333", equip: "legs" },

@@ -47,7 +47,17 @@ Idle.professions.crafting = {
       state.activity = null;
       return { kind: "full", text: "Inventory is full. Crafting stopped." };
     }
-    Object.entries(recipe.cost).forEach(([id, qty]) => Idle.systems.inventory.removeQty(state.slots, id, qty));
+    Object.entries(recipe.cost).forEach(([id, qty]) => {
+      if (id === "thread") {
+        const slot = state.slots.find((entry) => entry && entry.id === "thread");
+        if (slot) {
+          slot.uses = (slot.uses || 5) - 1;
+          if (slot.uses <= 0) Idle.systems.inventory.removeQty(state.slots, "thread", 1);
+        }
+      } else {
+        Idle.systems.inventory.removeQty(state.slots, id, qty);
+      }
+    });
     Idle.systems.inventory.add(state.slots, recipe.id, 1);
     const levels = Idle.systems.xp.grant(skill, recipe.xp);
     let text = `Crafted ${recipe.name} (+${recipe.xp} xp).`;

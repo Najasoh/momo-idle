@@ -52,6 +52,7 @@ Idle.data.towns = {
       { id: "talsy", name: "Talsy", quest: "cave_explorer", note: "Cave Explorer" },
       { id: "general_store", name: "General Store", note: "Buy and sell" },
       { id: "head_goblin_delegator", name: "Head Goblin Delegator", quest: "goblin_troubles", note: "Goblin Troubles" },
+      { id: "monk_hotei", name: "Monk Hotei", note: "Vendor · 5 coins" },
     ],
     services: [
       { id: "mailbox", name: "Mailbox", note: "Collect orders" },
