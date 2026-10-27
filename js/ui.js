@@ -38,6 +38,7 @@ Idle.ui = {
       this.paintFishTravel(now);
       this.paintQuestRun(now);
       this.paintCampfire(now);
+      this.heatTick(now);
       this.refillDiscover(now);
       this.paintAmbience(now);
       this.syncGeSound();
@@ -106,6 +107,11 @@ Idle.ui = {
       const result = job.tick(Idle.state);
       if (Idle.state.activity && Idle.state.activity.profession === "mining" && result.kind !== "idle" && result.kind !== "full" && result.kind !== "locked") {
         this.playPickHit();
+        if (Idle.state.town === "al_kharid" && Idle.systems.combat.level(Idle.state.combatSkills) <= 28 && Math.random() < 0.05) {
+          this.stopOther();
+          Idle.state.fight = { mob: "scorpion_14", phase: "fight", startedAt: performance.now(), playerHp: Idle.state.combatSkills.hitpoints.level, mobHp: 17, playerSwings: 0, mobSwings: 0 };
+          Idle.state.pushLog({ kind: "full", text: "A scorpion attacks!" });
+        }
       }
       if (result.kind !== "idle") Idle.state.pushLog(result);
       this.syncActivitySound();
@@ -579,8 +585,6 @@ Idle.ui = {
     if (levelLabel) levelLabel.textContent = `Level ${skill.level}`;
     const xpMeta = this.root.querySelector("[data-xp-meta]");
     if (xpMeta) xpMeta.innerHTML = `${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp <span class="xp-gain">${this.gainText(Idle.state.screen)}</span>`;
-    const gold = this.root.querySelector("[data-gold]");
-    if (gold) gold.textContent = `${this.format(Idle.state.gold)} gp`;
     const used = this.root.querySelector("[data-used]");
     if (used) used.textContent = `${Idle.systems.inventory.usedCount(Idle.state.slots)} / ${Idle.config.inventorySlots}`;
     const catalog = Idle.systems.inventory.catalog();
@@ -1040,7 +1044,7 @@ Idle.ui = {
       }
       Idle.state.quests.sheep_shearer = true;
       Idle.state.questPoints = (Idle.state.questPoints || 0) + 1;
-      Idle.state.gold = (Idle.state.gold || 0) + 60;
+      this.giveCoins(60);
       const levels = Idle.systems.xp.grant(Idle.state.skills.crafting, 150);
       Idle.state.questRun = null;
       Idle.state.place = "town";
@@ -1992,7 +1996,7 @@ Idle.ui = {
         if (Idle.state.skills[skill]) Idle.systems.xp.grant(Idle.state.skills[skill], amount);
       });
     }
-    if (quest.gold) Idle.state.gold = (Idle.state.gold || 0) + quest.gold;
+    if (quest.gold) this.giveCoins(quest.gold);
     Idle.state.pushLog({ kind: "level", text: `${quest.name} complete. +1 quest point.` });
     Idle.systems.save.write(Idle.state);
     this.render();
@@ -2066,6 +2070,10 @@ Idle.ui = {
     if (Idle.state.teaBuff) {
       const left = Math.max(0, Math.ceil((Idle.state.teaBuff.until - Date.now()) / 1000));
       if (left > 0) buffs.push(`Tea +${Idle.state.teaBuff.attack} Attack ${left}s`);
+    }
+    if (Idle.state.town === "al_kharid" && Idle.state.heat) {
+      const left = Math.max(0, Math.ceil((Idle.state.heat.until - performance.now()) / 1000));
+      buffs.push(`Heat ${left}s`);
     }
     return `<div class="buffs-panel" style="padding:4px 8px;background:#1a1410;border-bottom:1px solid #3a2e22">${buffs.length ? buffs.join(" · ") : "No active buffs"}</div>`;
   },
@@ -2216,12 +2224,11 @@ Idle.ui = {
     const entry = Idle.state.wydin[id];
     if (!entry || entry.left <= 0) return;
     const price = Math.max(1, Math.round(prices[id] * (1 + (entry.pct || 0))));
-    if (Idle.state.gold < price) {
+    if (!this.takeCoins(price)) {
       Idle.state.pushLog({ kind: "full", text: "Not enough gold." });
       this.render();
       return;
     }
-    Idle.state.gold -= price;
     entry.left -= 1;
     if (!entry.next || entry.next < Date.now()) entry.next = Date.now() + 60 * 1000;
     entry.pct = Math.max(-0.25, Math.min(0.25, (entry.pct || 0) + (Math.random() * 0.04 - 0.02)));
@@ -2297,7 +2304,7 @@ Idle.ui = {
     if (!entry || entry.left <= 0) return;
     const pct = entry.pct || 0;
     const price = Math.max(1, Math.round(prices[id] * (1 + pct)));
-    if (Idle.state.gold < price) {
+    if (!this.takeCoins(price)) {
       Idle.state.pushLog({ kind: "full", text: "Not enough gold." });
       this.render();
       return;
@@ -2307,7 +2314,6 @@ Idle.ui = {
       this.render();
       return;
     }
-    Idle.state.gold -= price;
     entry.left -= 1;
     const swing = (Math.floor(Math.random() * 3) + 1) / 100;
     entry.pct = Math.max(-0.25, Math.min(0.25, (entry.pct || 0) + (Math.random() < 0.5 ? swing : -swing)));
@@ -2321,7 +2327,7 @@ Idle.ui = {
     const item = catalog[id];
     const price = Math.floor((Idle.state.prices[id] || (item && item.sell) || 0) * 0.4);
     if (!Idle.systems.inventory.removeQty(Idle.state.slots, id, 1)) return;
-    Idle.state.gold += price;
+    this.giveCoins(price);
     Idle.state.pushLog({ kind: "pick", text: `Sold for ${price} gp.` });
     Idle.systems.save.write(Idle.state);
     this.render();
@@ -2491,7 +2497,8 @@ Idle.ui = {
     Idle.state.skills.agility = Idle.state.skills.agility || Idle.professions.agility.createSkill();
     const skill = Idle.state.skills.agility;
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
-    const courses = Idle.data.agility.courses;
+    const town = Idle.state.town;
+    const courses = Idle.data.agility.courses.filter((c) => !c.town || c.town === town);
     return `
       <section class="panel">
         <div class="screen-head">
@@ -2665,12 +2672,11 @@ Idle.ui = {
     const from = Idle.state.town || "lumbridge";
     if (id === from) return;
     if (id === "karamja") {
-      if ((Idle.state.gold || 0) < 30) {
+    if (!this.takeCoins(30)) {
         Idle.state.pushLog({ kind: "full", text: "Sailing to Karamja costs 30 gp." });
         this.render();
         return;
       }
-      Idle.state.gold -= 30;
       this.stopOther();
       Idle.state.place = "walking";
       Idle.state.leave = { steps: [{ label: "Sailing to Karamja", travel: 10 }], step: 0, startedAt: performance.now(), next: { place: "karamja" }, town: false };
@@ -2726,6 +2732,325 @@ Idle.ui = {
     `;
   },
 
+  grumShop() {
+    Idle.state.grum = Idle.state.grum || {};
+    const stock = [
+      { id: "gold_ring", stock: 1, restock: 600, price: 286 },
+      { id: "sapphire_ring", stock: 1, restock: 600, price: 782 },
+      { id: "emerald_ring", stock: 1, restock: 1200, price: 1078 },
+      { id: "ruby_ring", stock: 1, restock: 1200, price: 1852 },
+      { id: "diamond_ring", stock: 1, restock: 1800, price: 3532 },
+      { id: "gold_necklace", stock: 1, restock: 600, price: 282 },
+      { id: "sapphire_necklace", stock: 1, restock: 1200, price: 722 },
+      { id: "emerald_necklace", stock: 1, restock: 1200, price: 1152 },
+      { id: "ruby_necklace", stock: 1, restock: 1800, price: 1910 },
+      { id: "diamond_necklace", stock: 1, restock: 1800, price: 3616 },
+      { id: "gold_amulet", stock: 1, restock: 600, price: 256 },
+      { id: "sapphire_amulet", stock: 1, restock: 1200, price: 992 },
+      { id: "emerald_amulet", stock: 1, restock: 1800, price: 1330 },
+      { id: "ruby_amulet", stock: 1, restock: 2400, price: 2170 },
+      { id: "diamond_amulet", stock: 1, restock: 3000, price: 3854 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.grum[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + item.restock * 1000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + item.restock * 1000;
+      Idle.state.grum[item.id] = entry;
+    });
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Vendor</p><h1>Grum's Gold Exchange</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.grum[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            return `<button class="pill" data-action="buy-grum" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} · ${item.price} gp · ${entry.left}</button>`;
+          }).join("")}
+        </div>
+        <p class="kicker">Sell jewelry</p>
+        <div class="bubbles">
+          ${Idle.state.slots.filter(Boolean).filter((slot) => /ring|necklace|amulet/.test(slot.id)).map((slot) => {
+            const ge = catalog[slot.id] ? catalog[slot.id].sell : 0;
+            const pay = Math.round(ge * 1.7);
+            return `<button class="pill" data-action="sell-grum" data-item="${slot.id}">${catalog[slot.id].name} × ${slot.qty} · ${pay} gp</button>`;
+          }).join("") || `<p class="hint">No jewelry to sell.</p>`}
+        </div>
+      </section>
+    `;
+  },
+
+  sellGrum(id) {
+    const catalog = Idle.systems.inventory.catalog();
+    const item = catalog[id];
+    if (!item || !/ring|necklace|amulet/.test(id)) return;
+    if (!Idle.systems.inventory.removeQty(Idle.state.slots, id, 1)) return;
+    const pay = Math.round(item.sell * 1.7);
+      this.giveCoins(pay);
+    Idle.state.pushLog({ kind: "pick", text: `Sold ${item.name} for ${pay} gp.` });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  buyGrum(id) {
+    const prices = { gold_ring: 286, sapphire_ring: 782, emerald_ring: 1078, ruby_ring: 1852, diamond_ring: 3532, gold_necklace: 282, sapphire_necklace: 722, emerald_necklace: 1152, ruby_necklace: 1910, diamond_necklace: 3616, gold_amulet: 256, sapphire_amulet: 992, emerald_amulet: 1330, ruby_amulet: 2170, diamond_amulet: 3854 };
+    const entry = Idle.state.grum && Idle.state.grum[id];
+    if (!entry || entry.left <= 0) return;
+    const price = prices[id] || 0;
+    if (!this.takeCoins(price)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough gold." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    entry.left -= 1;
+    if (!entry.next) entry.next = Date.now() + 600000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  fennecShop() {
+    Idle.state.fennec = Idle.state.fennec || {};
+    const stock = [
+      { id: "cabbage", stock: 1 }, { id: "jug_of_water", stock: 1 }, { id: "body_rune", stock: 1 },
+      { id: "leather_boots", stock: 1 }, { id: "bucket", stock: 1 }, { id: "bronze_mace", stock: 1 },
+      { id: "fire_rune", stock: 3 }, { id: "water_rune", stock: 4 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.fennec[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + 50000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + 50000;
+      Idle.state.fennec[item.id] = entry;
+    });
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Vendor</p><h1>Monk Fennec</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <p class="hint">Everything is 20 coins. He does not buy.</p>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.fennec[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            return `<button class="pill" data-action="buy-fennec" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} (${entry.left}) · 20 coins</button>`;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  buyFennec(id) {
+    const entry = Idle.state.fennec && Idle.state.fennec[id];
+    if (!entry || entry.left <= 0) {
+      Idle.state.pushLog({ kind: "full", text: "Out of stock." });
+      this.render();
+      return;
+    }
+    if (!this.takeCoins(20)) {
+      Idle.state.pushLog({ kind: "full", text: "You need 20 coins." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    entry.left -= 1;
+    if (!entry.next) entry.next = Date.now() + 50000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  talkOutpost() {
+    this.setScreen("outpost");
+  },
+
+  outpostScreen() {
+    const here = Idle.state.town;
+    const dest = here === "al_kharid" ? "lumbridge" : "al_kharid";
+    const name = dest === "al_kharid" ? "Al Kharid" : "Lumbridge";
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Outpost Guard</p><h1>Passage</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <p>Outpost Guard: To pass you must pay the fee of 10 coins.</p>
+        <div class="bubbles">
+          <button class="pill" data-action="outpost-yes" data-dest="${dest}">Yes</button>
+          <button class="pill" data-action="outpost-no">No</button>
+        </div>
+      </section>
+    `;
+  },
+
+  confirmOutpost(dest) {
+    const name = dest === "al_kharid" ? "Al Kharid" : "Lumbridge";
+    if (!Idle.systems.inventory.removeQty(Idle.state.slots, "coins", 10)) {
+      Idle.state.pushLog({ kind: "full", text: "Passage costs 10 coins." });
+      this.render();
+      return;
+    }
+    Idle.systems.save.write(Idle.state);
+    this.stopOther();
+    Idle.state.place = "walking";
+    Idle.state.leave = { steps: [{ label: `Crossing to ${name}`, travel: 3 }], step: 0, startedAt: performance.now(), next: { place: dest }, town: false };
+    Idle.state.pushLog({ kind: "pick", text: `Paid 10 coins. Crossing to ${name}. 3 seconds.` });
+    this.render();
+  },
+
+  aliShop() {
+    Idle.state.ali = Idle.state.ali || {};
+    const stock = [
+      { id: "pot", stock: 3 }, { id: "jug", stock: 2 }, { id: "waterskin_3", stock: 10 },
+      { id: "desert_shirt", stock: 3 }, { id: "desert_boots", stock: 2 }, { id: "bucket", stock: 19 },
+      { id: "fake_beard", stock: 1 }, { id: "kharidian_headpiece", stock: 12 }, { id: "papyrus", stock: 50 },
+      { id: "knife", stock: 5 }, { id: "tinderbox", stock: 11 }, { id: "bronze_pickaxe", stock: 23 },
+      { id: "raw_chicken", stock: 15 },
+      { id: "fez", stock: 25 }, { id: "desert_top", stock: 25 }, { id: "desert_overcoat", stock: 1 },
+      { id: "desert_legs", stock: 1 }, { id: "desert_robes", stock: 25 },
+    ];
+    if (Idle.state.quests && Idle.state.quests.exquisite_goods) {
+      stock.push(
+        { id: "menaphite_purple_hat", stock: 2 }, { id: "menaphite_purple_top", stock: 2 },
+        { id: "menaphite_purple_robe", stock: 2 }, { id: "menaphite_purple_kilt", stock: 2 },
+        { id: "menaphite_red_hat", stock: 2 }, { id: "menaphite_red_top", stock: 2 },
+        { id: "menaphite_red_robe", stock: 2 }, { id: "menaphite_red_kilt", stock: 2 },
+        { id: "water_rune", stock: 20, mult: 1.3 }, { id: "fire_rune", stock: 20, mult: 1.3 },
+        { id: "air_rune", stock: 20, mult: 1.3 }, { id: "earth_rune", stock: 20, mult: 1.3 },
+        { id: "nature_rune", stock: 100, mult: 1.25 }, { id: "law_rune", stock: 100, mult: 1.25 },
+        { id: "chaos_rune", stock: 100, mult: 1.25 }, { id: "death_rune", stock: 100, mult: 1.25 },
+        { id: "mind_rune", stock: 100, mult: 1.25 }, { id: "body_rune", stock: 100, mult: 1.25 },
+        { id: "blood_rune", stock: 100, mult: 1.25 }, { id: "cosmic_rune", stock: 10, mult: 1.25 },
+        { id: "soul_rune", stock: 100, mult: 1.25 },
+      );
+    }
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.ali[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + 50000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + 50000;
+      Idle.state.ali[item.id] = entry;
+    });
+    const sellable = Idle.state.slots.filter(Boolean).filter((slot) => catalog[slot.id] && catalog[slot.id].sell > 0);
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Vendor</p><h1>Ali Morrisane</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.ali[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            const price = catalog[item.id] ? Math.round(catalog[item.id].sell * (item.mult || 1)) : 0;
+            return `<button class="pill" data-action="buy-ali" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} (${entry.left}) · ${price} gp</button>`;
+          }).join("")}
+        </div>
+        <p class="kicker">Sell</p>
+        <div class="bubbles">
+          ${sellable.map((slot) => {
+            const pay = Math.round(catalog[slot.id].sell * 0.55);
+            return `<button class="pill" data-action="sell-ali" data-item="${slot.id}">${catalog[slot.id].name} × ${slot.qty} · ${pay} gp</button>`;
+          }).join("") || `<p class="hint">Nothing to sell.</p>`}
+        </div>
+      </section>
+    `;
+  },
+
+  buyAli(id) {
+    const entry = Idle.state.ali && Idle.state.ali[id];
+    if (!entry || entry.left <= 0) return;
+    const catalog = Idle.systems.inventory.catalog();
+    const price = catalog[id] ? Math.round(catalog[id].sell * ((Idle.state.ali && Idle.state.ali[id] && Idle.state.ali[id].mult) || 1)) : 0;
+    if (!this.takeCoins(price)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    entry.left -= 1;
+    if (!entry.next) entry.next = Date.now() + 50000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  sellAli(id) {
+    const catalog = Idle.systems.inventory.catalog();
+    const item = catalog[id];
+    if (!item || !item.sell) return;
+    if (!Idle.systems.inventory.removeQty(Idle.state.slots, id, 1)) return;
+    this.giveCoins(Math.round(item.sell * 0.55));
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  heatTick(now) {
+    const inZone = Idle.state.activity || Idle.state.fight;
+    if (Idle.state.town !== "al_kharid" || !inZone) {
+      Idle.state.heat = null;
+      return;
+    }
+    Idle.state.heat = Idle.state.heat || { until: now + (24 + Math.random() * 108) * 1000 };
+    const heat = Idle.state.heat;
+    const def = this.heatDefense();
+    const max = Math.min(132, 24 + def);
+    if (now >= heat.until) {
+      const skin = ["waterskin_3", "waterskin_2", "waterskin_1"].find((id) => Idle.systems.inventory.count(Idle.state.slots, id) > 0);
+      if (skin) {
+        Idle.systems.inventory.removeQty(Idle.state.slots, skin, 1);
+        const next = skin === "waterskin_3" ? "waterskin_2" : skin === "waterskin_2" ? "waterskin_1" : null;
+        if (next) Idle.systems.inventory.add(Idle.state.slots, next, 1);
+        Idle.systems.sound.play("waterskin", false);
+        Idle.state.pushLog({ kind: "pick", text: "Drank from waterskin." });
+      } else {
+        const dmg = Math.max(1, Math.floor(1 + Math.random() * 10) - Math.floor(def / 2));
+        Idle.state.hp = Math.max(0, (Idle.state.hp || Idle.state.combatSkills.hitpoints.level) - dmg);
+        Idle.state.pushLog({ kind: "full", text: `The heat hits you for ${dmg}.` });
+        if (Idle.state.hp <= 0) this.playerDown(now);
+      }
+      heat.until = now + Math.min(132, 24 + Math.random() * 108 + def) * 1000;
+      this.render();
+    }
+  },
+
+  heatDefense() {
+    const equip = Idle.state.equipment || {};
+    const catalog = Idle.systems.inventory.catalog();
+    return Object.values(equip).reduce((total, id) => {
+      if (!id) return total;
+      const item = catalog[id];
+      const stats = Idle.data.weaponStats && Idle.data.weaponStats[id];
+      return total + (item && item.heat ? item.heat : 0) + (stats && stats.heat ? stats.heat : 0);
+    }, 0);
+  },
+
   buyHotei(id) {
     const entry = Idle.state.hotei && Idle.state.hotei[id];
     if (!entry || entry.left <= 0) {
@@ -2733,7 +3058,7 @@ Idle.ui = {
       this.render();
       return;
     }
-    if ((Idle.state.gold || 0) < 5) {
+    if (!this.takeCoins(5)) {
       Idle.state.pushLog({ kind: "full", text: "You need 5 coins." });
       this.render();
       return;
@@ -2743,7 +3068,6 @@ Idle.ui = {
       this.render();
       return;
     }
-    Idle.state.gold -= 5;
     entry.left -= 1;
     if (!entry.next) entry.next = Date.now() + 50000;
     Idle.systems.save.write(Idle.state);
@@ -2931,6 +3255,53 @@ Idle.ui = {
     }
   },
 
+  talkKelso() {
+    this.setScreen("kelso");
+  },
+
+  kelsoScreen() {
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Kelso</p><h1>Exquisite goods!</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <p>Kelso: Bring me 3 leather, 2 cowhide, and 5 balls of wool. Will you accept?</p>
+        <div class="bubbles">
+          <button class="pill" data-action="kelso-yes">Yes</button>
+          <button class="pill" data-action="kelso-no">No</button>
+        </div>
+      </section>
+    `;
+  },
+
+  acceptKelso() {
+    Idle.state.questProgress = Idle.state.questProgress || {};
+    Idle.state.questProgress.exquisite_goods = true;
+    Idle.state.questOpen = "exquisite_goods";
+    Idle.state.screen = "quests";
+    Idle.state.pushLog({ kind: "pick", text: "Quest accepted: Exquisite goods!" });
+    this.render();
+  },
+
+  turnInExquisite() {
+    const needs = Idle.data.quests.exquisite_goods.needs;
+    if (!needs.every((need) => Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty)) {
+      Idle.state.pushLog({ kind: "full", text: "Missing items." });
+      this.render();
+      return;
+    }
+    needs.forEach((need) => Idle.systems.inventory.removeQty(Idle.state.slots, need.id, need.qty));
+    Idle.state.quests.exquisite_goods = true;
+    Idle.state.questPoints = (Idle.state.questPoints || 0) + 1;
+    const skill = Idle.state.skills.crafting || Idle.professions.crafting.createSkill();
+    Idle.systems.xp.grant(skill, 150);
+    Idle.state.skills.crafting = skill;
+    Idle.state.questComplete = { title: "Exquisite goods!", lines: ["1 Quest point", "150 Crafting xp"] };
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
   talkNpc(id) {
     const town = Idle.data.towns[Idle.state.town];
     const npc = town && town.npcs.find((entry) => entry.id === id);
@@ -3084,6 +3455,7 @@ Idle.ui = {
       { id: "imp_catcher", title: "Imp Catcher" },
       { id: "witchs_potion", title: "Witch's Potion" },
       { id: "pirates_treasure", title: "Pirate's Treasure" },
+      { id: "exquisite_goods", title: "Exquisite goods!" },
     ].filter((quest) => statusOf(quest.id) === tab);
     const open = this.questOpen;
     const cooks = Idle.data.quests.cooks_assistant;
@@ -3213,6 +3585,20 @@ Idle.ui = {
             <p>Become one with your darker side. Bring Hetty the ingredients.</p>
             ${lines}
             ${done ? `<p class="hint">Finished. +325 Magic xp.</p>` : `<button class="btn" data-action="talk-hetty">Return to Hetty</button>`}
+          </div>` : ""}`;
+      }
+      if (quest.id === "exquisite_goods") {
+        const done = Idle.state.quests.exquisite_goods;
+        const needs = Idle.data.quests.exquisite_goods.needs;
+        const ready = needs.every((need) => Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty);
+        const line = (need) => {
+          const have = Idle.systems.inventory.count(Idle.state.slots, need.id) >= need.qty;
+          return `<p class="${have ? "have" : "need"}">${need.qty} ${need.name}</p>`;
+        };
+        return `<button class="pill ${gold}" data-action="open-exquisite">Exquisite goods!</button>
+          ${opened ? `<div class="quest-sheet">
+            ${needs.map(line).join("")}
+            ${done ? `<p class="hint">Finished. +150 Crafting xp, 1 quest point.</p>` : ready ? `<button class="btn" data-action="turnin-exquisite">Return to Kelso</button>` : ""}
           </div>` : ""}`;
       }
       return "";
@@ -3475,12 +3861,11 @@ Idle.ui = {
       return;
     }
     if (id === "luthas-pay") {
-      if ((Idle.state.gold || 0) < 30) {
+    if (!this.takeCoins(30)) {
         Idle.state.pushLog({ kind: "full", text: "You need 30 gp." });
         this.render();
         return;
       }
-      Idle.state.gold -= 30;
       Idle.state.pushLog({ kind: "pick", text: "Luthas: The shipment is going to Wydin." });
       this.render();
       return;
@@ -3498,12 +3883,11 @@ Idle.ui = {
       return;
     }
     if (id === "customs-pay") {
-      if ((Idle.state.gold || 0) < 30) {
+    if (!this.takeCoins(30)) {
         Idle.state.pushLog({ kind: "full", text: "You need 30 gp." });
         this.render();
         return;
       }
-      Idle.state.gold -= 30;
       this.stopOther();
       Idle.state.place = "walking";
       Idle.state.leave = { steps: [{ label: "Returning to Port Sarim", travel: 20 }], step: 0, startedAt: performance.now(), next: { place: "port_sarim" }, town: false };
@@ -3512,12 +3896,11 @@ Idle.ui = {
       return;
     }
     if (id === "zembo-buy") {
-      if ((Idle.state.gold || 0) < 30) {
+    if (!this.takeCoins(30)) {
         Idle.state.pushLog({ kind: "full", text: "You need 30 gp." });
         this.render();
         return;
       }
-      Idle.state.gold -= 30;
       Idle.systems.inventory.add(Idle.state.slots, "karamjan_rum", 1);
       Idle.state.pushLog({ kind: "pick", text: "Bought Karamjan rum." });
       this.render();
@@ -3648,7 +4031,7 @@ Idle.ui = {
       });
     }
     if (quest.rewardItem) Idle.systems.inventory.add(Idle.state.slots, quest.rewardItem, 1);
-    if (quest.gold) Idle.state.gold = (Idle.state.gold || 0) + quest.gold;
+    if (quest.gold) this.giveCoins(quest.gold);
     const points = quest.points || 1;
     const lines = questId === "goblin_troubles"
       ? ["1 Quest Point", "Learned how to craft a new anvil recipe."]
@@ -3888,11 +4271,8 @@ Idle.ui = {
         <div class="wheel" data-wheel>
           ${items.map((item) => `
             <div class="node wheel-item market-row">
-              <span class="market-line">${item.name} · ${Idle.state.prices[item.id]} gp</span>
-              <span class="offer">
-                <button class="btn small" data-action="add-cart" data-item="${item.id}">Add</button>
-                <input class="qty" type="number" min="1" value="1" data-qty="${item.id}">
-              </span>
+              <button class="text-btn" data-action="expand-item" data-item="${item.id}" style="width:100%;text-align:left">${item.name}</button>
+              ${this.expandedItem === item.id ? `<span class="offer"><span>${Idle.state.prices[item.id]} gp</span><input class="qty" type="number" min="1" value="1" data-qty="${item.id}"><button class="btn small" data-action="add-cart" data-item="${item.id}">Add</button></span>` : ""}
             </div>`).join("")}
         </div>
         <div class="cart">
@@ -4034,6 +4414,11 @@ Idle.ui = {
     if (Idle.state.screen === "bestiary") return this.bestiary();
     if (Idle.state.screen === "store") return this.store();
     if (Idle.state.screen === "hotei") return this.hoteiShop();
+    if (Idle.state.screen === "grum") return this.grumShop();
+    if (Idle.state.screen === "fennec") return this.fennecShop();
+    if (Idle.state.screen === "ali") return this.aliShop();
+    if (Idle.state.screen === "outpost") return this.outpostScreen();
+    if (Idle.state.screen === "kelso") return this.kelsoScreen();
     if (Idle.state.screen === "wydin") return this.wydinShop();
     if (Idle.state.screen === "bank") return this.bank();
     if (Idle.state.screen === "spellbook") return this.spellbook();
@@ -4306,7 +4691,7 @@ Idle.ui = {
     const slot = selected === null ? null : Idle.state.slots[selected];
     if (!slot || slot.id !== "one_eyed_hectors_treasure") return;
     Idle.systems.inventory.removeQty(Idle.state.slots, "one_eyed_hectors_treasure", 1);
-    Idle.state.gold = (Idle.state.gold || 0) + 450;
+    this.giveCoins(450);
     Idle.systems.inventory.add(Idle.state.slots, "gold_ring", 1);
     Idle.systems.inventory.add(Idle.state.slots, "emerald", 1);
     Idle.state.pushLog({ kind: "pick", text: "Opened the treasure: 450 gp, gold ring, emerald." });
@@ -4439,6 +4824,7 @@ Idle.ui = {
         if (action === "withdraw") this.withdraw(Number(el.dataset.bank));
         if (action === "market-buy") { this.marketMode = "buy"; this.render(); }
         if (action === "market-sell") { this.marketMode = "sell"; this.render(); }
+        if (action === "expand-item") { this.expandedItem = this.expandedItem === el.dataset.item ? null : el.dataset.item; this.render(); }
         if (action === "pick-sell") { this.sellPick = el.dataset.item; this.render(); }
         if (action === "cancel-sale") {
           Idle.systems.exchange.cancelSale(Idle.state, Number(el.dataset.sale));
@@ -4503,7 +4889,22 @@ Idle.ui = {
         if (action === "talk-lumberjack_beave") this.talkNpc("lumberjack_beave");
     if (action === "talk-talsy") this.talkNpc("talsy");
     if (action === "talk-general_store") this.openStore();
-    if (action === "talk-monk_hotei") this.setScreen("hotei");
+    if (action === "talk-monk_fennec") this.setScreen("fennec");
+    if (action === "talk-ali_morrisane") this.setScreen("ali");
+    if (action === "talk-kelso") this.talkKelso();
+    if (action === "kelso-yes") this.acceptKelso();
+    if (action === "kelso-no") this.setScreen("town");
+    if (action === "turnin-exquisite") this.turnInExquisite();
+    if (action === "open-exquisite") { this.questOpen = this.questOpen === "exquisite_goods" ? null : "exquisite_goods"; this.render(); }
+    if (action === "buy-ali") this.buyAli(el.dataset.item);
+    if (action === "sell-ali") this.sellAli(el.dataset.item);
+    if (action === "talk-outpost_guard") this.talkOutpost();
+    if (action === "outpost-yes") this.confirmOutpost(el.dataset.dest);
+    if (action === "outpost-no") this.setScreen("town");
+    if (action === "buy-fennec") this.buyFennec(el.dataset.item);
+    if (action === "talk-grum") this.setScreen("grum");
+    if (action === "buy-grum") this.buyGrum(el.dataset.item);
+    if (action === "sell-grum") this.sellGrum(el.dataset.item);
     if (action === "buy-hotei") this.buyHotei(el.dataset.item);
     if (action === "buy-store") this.buyStore(el.dataset.item);
     if (action === "buy-wydin") this.buyWydin(el.dataset.item);
@@ -4753,7 +5154,7 @@ Idle.ui = {
     const lines = [`<strong>${item.name}</strong>`];
     if (qty) lines.push(`Stack ${qty}`);
     if (item.sell !== undefined) lines.push(`Sell ${item.sell} gp`);
-    if (item.heal) lines.push(`Heals ${item.heal}`);
+    if (item.desc) lines.push(item.desc);
     if (Idle.data.altarFish[id]) lines.push(`Altar ${Idle.data.altarFish[id].prayer} Prayer · ${Idle.data.altarFish[id].seconds}s`);
     if (item.equip) lines.push(`Worn: ${item.equip}${item.hands === 2 ? " · two-handed" : ""}`);
     if (weapon) {
@@ -4784,6 +5185,19 @@ Idle.ui = {
   iconHtml(id, item) {
     const color = item && item.swatch ? item.swatch : "#888";
     return `<span class="icon-wrap" style="background:${color}"><img class="item-icon" src="images/${id}.png" alt="" onerror="this.remove()"></span>`;
+  },
+
+  coinCount() {
+    return Idle.systems.inventory.count(Idle.state.slots, "coins");
+  },
+
+  takeCoins(qty) {
+    if (this.coinCount() < qty) return false;
+    return Idle.systems.inventory.removeQty(Idle.state.slots, "coins", qty);
+  },
+
+  giveCoins(qty) {
+    return Idle.systems.inventory.add(Idle.state.slots, "coins", qty);
   },
 
   format(n) {

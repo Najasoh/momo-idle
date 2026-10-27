@@ -14,9 +14,29 @@ Idle.data.thieving = {
 Idle.data.agility = {
   courses: [
     {
+      id: "alkharid_rooftop",
+      name: "Al Kharid rooftop",
+      level: 20,
+      town: "al_kharid",
+      total: 64,
+      time: 8,
+      mark: 0,
+      obstacles: [
+        { name: "Scaling rough wall", xp: 12 },
+        { name: "Balancing on tightrope", xp: 36, fail: 0.25, dmg: true },
+        { name: "Cable", xp: 48 },
+        { name: "Zip line", xp: 48, fail: 0.25, dmg: true },
+        { name: "Tropical tree climbing", xp: 12 },
+        { name: "Roof top beam balancing", xp: 6 },
+        { name: "Balancing on tight rope", xp: 18 },
+        { name: "Jumping the gaps", xp: 36 },
+      ],
+    },
+    {
       id: "varrock_rooftop",
       name: "Varrock rooftop",
       level: 30,
+      town: "varrock",
       total: 70,
       time: 7.8,
       mark: 0.13,

@@ -173,7 +173,7 @@ Idle.systems.combat = {
     const names = [];
     const give = (id, qty) => {
       if (id === "coins") {
-        Idle.state.gold += qty;
+        Idle.systems.inventory.add(Idle.state.slots, "coins", qty);
         names.push(`${qty} coins`);
         return;
       }

@@ -52,7 +52,8 @@ Idle.data.towns = {
       { id: "talsy", name: "Talsy", quest: "cave_explorer", note: "Cave Explorer" },
       { id: "general_store", name: "General Store", note: "Buy and sell" },
       { id: "head_goblin_delegator", name: "Head Goblin Delegator", quest: "goblin_troubles", note: "Goblin Troubles" },
-      { id: "monk_hotei", name: "Monk Hotei", note: "Vendor · 5 coins" },
+      { id: "monk_hotei", name: "Monk Hotei", note: "" },
+      { id: "outpost_guard", name: "Outpost Guard", note: "" },
     ],
     services: [
       { id: "mailbox", name: "Mailbox", note: "Collect orders" },
@@ -137,6 +138,7 @@ Idle.data.towns = {
       { id: "redbeard", name: "Redbeard Frank", quest: "pirates_treasure", note: "Pirate's Treasure" },
       { id: "sailor", name: "Sailor", note: "Sail to Karamja" },
       { id: "wydin", name: "Wydin", note: "Job" },
+      { id: "grum", name: "Grum", note: "" },
     ],
     services: [],
   },
@@ -160,6 +162,34 @@ Idle.data.towns = {
       { id: "gardener", name: "Gardener", note: "treasure" },
     ],
     npcs: [],
+    services: [],
+  },
+  al_kharid: {
+    id: "al_kharid",
+    name: "Al Kharid",
+    professions: [
+      { id: "agility", name: "Agility", note: "Rooftop course" },
+      { id: "mining", name: "Mining", note: "Copper, tin, iron, silver, coal, gold, mithril, adamantite" },
+    ],
+    mobs: [
+      { id: "scorpion_14", name: "Scorpion", note: "Level 14" },
+    ],
+    gather: [
+      { id: "copper", name: "Copper", note: "Level 1" },
+      { id: "tin", name: "Tin", note: "Level 1" },
+      { id: "iron", name: "Iron", note: "Level 15" },
+      { id: "silver", name: "Silver", note: "Level 20" },
+      { id: "coal", name: "Coal", note: "Level 30" },
+      { id: "gold", name: "Gold", note: "Level 40" },
+      { id: "mithril", name: "Mithril", note: "Level 55" },
+      { id: "adamantite", name: "Adamantite", note: "Level 70" },
+    ],
+    npcs: [
+      { id: "outpost_guard", name: "Outpost Guard", note: "" },
+      { id: "monk_fennec", name: "Monk Fennec", note: "" },
+      { id: "ali_morrisane", name: "Ali Morrisane", note: "" },
+      { id: "kelso", name: "Kelso", note: "" },
+    ],
     services: [],
   },
 };
@@ -193,4 +223,8 @@ Idle.data.townTravel = {
   "falador|wizards_tower": 15,
   "port_sarim|karamja": 10,
   "karamja|port_sarim": 20,
+  "lumbridge|al_kharid": 20,
+  "al_kharid|lumbridge": 20,
+  "varrock|al_kharid": 20,
+  "al_kharid|varrock": 20,
 };
