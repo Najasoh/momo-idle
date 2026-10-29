@@ -31,7 +31,7 @@ Idle.data.anvilItems = [
     { id: "iron_mace", name: "Iron mace", metal: "iron", level: 17, xp: 25, sell: 62, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333", equip: "weapon", hands: 1 },
     { id: "iron_spit", name: "Iron spit", metal: "iron", level: 17, xp: 25, sell: 177, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
     { id: "iron_med_helm", name: "Iron med helm", metal: "iron", level: 18, xp: 25, sell: 12, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333", equip: "helm" },
-    { id: "iron_bolt_unf", name: "Iron bolts(unf)", metal: "iron", level: 19, xp: 25, sell: 22, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
+    { id: "iron_bolt_unf", name: "Iron bolt unf", metal: "iron", level: 19, qty: 10, xp: 25, sell: 22, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
     { id: "iron_sword", name: "Iron sword", metal: "iron", level: 19, xp: 25, sell: 85, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333", equip: "weapon", hands: 1 },
     { id: "iron_dart_tip", name: "Iron dart tip", metal: "iron", level: 19, xp: 25, sell: 51, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
     { id: "iron_nails", name: "Iron nails", metal: "iron", level: 19, xp: 25, sell: 7, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
