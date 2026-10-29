@@ -10,8 +10,7 @@ Idle.data.fletchingItems = [
 
 Idle.data.fletchingRecipes = [
   {
-    id: "arrow_shaft",
-    name: "Arrow shaft",
+    id: "arrow_shaft", name: "Arrow shaft",
     level: 1,
     xp: 5,
     seconds: 1.2,

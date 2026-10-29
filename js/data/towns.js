@@ -78,6 +78,11 @@ Idle.data.towns = {
       { id: "oak", name: "Oak tree", note: "Woodcutting 15" },
       { id: "willow", name: "Willow tree", note: "Woodcutting 30" },
       { id: "yew", name: "Yew tree", note: "Woodcutting 60" },
+      { id: "copper", name: "Copper", note: "Level 1" },
+      { id: "tin", name: "Tin", note: "Level 1" },
+      { id: "iron", name: "Iron", note: "Level 15" },
+      { id: "clay", name: "Clay", note: "Level 1" },
+      { id: "silver", name: "Silver", note: "Level 20" },
     ],
     mobs: [
       { id: "man", name: "Man", note: "" },
@@ -96,12 +101,15 @@ Idle.data.towns = {
     npcs: [
       { id: "doric", name: "Doric", quest: "dorics_quest", note: "Doric's Quest" },
       { id: "aubury", name: "Aubury", quest: "rune_mysteries", note: "Rune Mysteries" },
+      { id: "gem_trader", name: "Gem trader", note: "" },
+      { id: "monk_cain", name: "Monk Cain", note: "" },
     ],
     services: [
       { id: "exchange", name: "Grand Exchange", note: "Buy and sell" },
       { id: "mailbox", name: "Mailbox", note: "Collect orders" },
       { id: "bank", name: "Bank", note: "Store items" },
       { id: "altar", name: "Altar", note: "Pray and recharge" },
+      { id: "lumberyard", name: "Varrock Lumber Yard", note: "Sawmill" },
     ],
   },
   wizards_tower: {
@@ -110,7 +118,7 @@ Idle.data.towns = {
     professions: [],
     mobs: [
       { id: "wizard", name: "Wizard", note: "magic" },
-      { id: "imp", name: "Imp", note: "beads" },
+      { id: "imp", name: "Imp", note: "" },
     ],
     npcs: [
       { id: "wizard_mizgog", name: "Wizard Mizgog", quest: "imp_catcher", note: "Imp Catcher" },

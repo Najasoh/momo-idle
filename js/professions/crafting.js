@@ -28,6 +28,7 @@ Idle.professions.crafting = {
   },
 
   hasCost(slots, recipe) {
+    if (recipe.coins && Idle.systems.inventory.count(slots, "coins") < recipe.coins) return false;
     return Object.entries(recipe.cost).every(([id, qty]) => Idle.systems.inventory.count(slots, id) >= qty);
   },
 
@@ -58,6 +59,7 @@ Idle.professions.crafting = {
         Idle.systems.inventory.removeQty(state.slots, id, qty);
       }
     });
+    if (recipe.coins) Idle.systems.inventory.removeQty(state.slots, "coins", recipe.coins);
     Idle.systems.inventory.add(state.slots, recipe.id, 1);
     const levels = Idle.systems.xp.grant(skill, recipe.xp);
     let text = `Crafted ${recipe.name} (+${recipe.xp} xp).`;

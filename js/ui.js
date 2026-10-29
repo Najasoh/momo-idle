@@ -87,6 +87,36 @@ Idle.ui = {
         Idle.state.activity.until = null;
         this.tickStartedAt = now;
       }
+      if (Idle.state.activity && Idle.state.activity.profession === "kinetic" && Idle.state.activity.until) {
+        if (now < Idle.state.activity.until) {
+          const left = Math.ceil((Idle.state.activity.until - now) / 1000);
+          const fill = this.root.querySelector("[data-tick-fill]");
+          const label = this.root.querySelector("[data-tick-label]");
+          if (label) label.textContent = `Kinetic Grab · ${left}s`;
+          if (fill) fill.style.width = `${Math.min(100, ((now - (Idle.state.activity.until - 2800)) / 2800) * 100)}%`;
+          return;
+        }
+        const item = Idle.state.activity.id;
+        Idle.systems.inventory.removeQty(Idle.state.slots, "air_rune", 1);
+        Idle.systems.inventory.removeQty(Idle.state.slots, "law_rune", 1);
+        const success = Math.random() < 0.7;
+        if (success) {
+          if (item === "coins") this.giveCoins(225);
+          else Idle.systems.inventory.add(Idle.state.slots, item, 1);
+          Idle.state.pushLog({ kind: "pick", text: `Kinetic Grab succeeded. Got ${item.replaceAll("_", " ")}.` });
+        } else {
+          Idle.state.pushLog({ kind: "full", text: "Kinetic Grab failed." });
+        }
+        const magic = Idle.state.combatSkills.magic;
+        const thieving = Idle.state.skills.thieving || Idle.professions.thieving.createSkill();
+        Idle.systems.xp.grant(magic, 43);
+        Idle.systems.xp.grant(thieving, 23);
+        Idle.state.skills.thieving = thieving;
+        Idle.state.activity = null;
+        Idle.systems.save.write(Idle.state);
+        this.render();
+        return;
+      }
       if (Idle.state.activity && Idle.state.activity.profession === "thieving" && Idle.state.activity.phase && Idle.state.activity.until) {
         if (now < Idle.state.activity.until) {
           const left = Math.ceil((Idle.state.activity.until - now) / 1000);
@@ -757,6 +787,16 @@ Idle.ui = {
       this.render();
       return;
     }
+    if (next && next.place === "varrock" && next.rune) {
+      Idle.state.town = "varrock";
+      Idle.state.place = "varrock";
+      Idle.state.quests.rune_mysteries = true;
+      Idle.state.questPoints = (Idle.state.questPoints || 0) + 1;
+      Idle.state.questComplete = { title: "Rune Mysteries", lines: ["1 Quest point"] };
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
     if (next && next.place === "falador" && next.dig) {
       Idle.state.town = "falador";
       Idle.state.place = "falador";
@@ -808,6 +848,14 @@ Idle.ui = {
       Idle.state.place = "market";
       Idle.state.screen = next.screen || "exchange";
       Idle.state.pushLog({ kind: "pick", text: "Arrived at the Grand Exchange." });
+      Idle.systems.save.write(Idle.state);
+      this.render();
+      return;
+    }
+    if (next && next.place === "lumberyard") {
+      Idle.state.place = "lumberyard";
+      Idle.state.screen = "lumberyard";
+      Idle.state.pushLog({ kind: "pick", text: "Arrived at the Lumber Yard." });
       Idle.systems.save.write(Idle.state);
       this.render();
       return;
@@ -1196,13 +1244,15 @@ Idle.ui = {
     const station = this.craftStation || "spinning_wheel";
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
     const recipes = Idle.data.craftingRecipes.filter((recipe) => recipe.station === station);
+    const fromYard = Idle.state.place === "lumberyard";
+    const stations = fromYard ? Idle.data.craftingStations.filter((s) => s.id === "sawmill") : Idle.data.craftingStations;
     return `
       <section class="panel">
         <div class="screen-head">
           <div>
             <p class="kicker">Stations</p>
           </div>
-          <button class="text-btn" data-action="hub">Back to menu</button>
+          <button class="text-btn" data-action="${fromYard ? "lumberyard" : "hub"}">${fromYard ? "Back" : "Back to menu"}</button>
         </div>
         <div class="level-block">
           <div class="level-label" data-level-label>Crafting ${skill.level}</div>
@@ -1210,13 +1260,14 @@ Idle.ui = {
           <div class="bar xp-track" aria-hidden="true"><span data-xp-fill style="width:${pct}%"></span></div>
         </div>
         <div class="metal-tabs">
-          ${Idle.data.craftingStations.map((entry) => `<button class="tab ${station === entry.id ? "on" : ""}" data-action="craft-${entry.id}">${entry.name}</button>`).join("")}
+          ${stations.map((entry) => `<button class="tab ${station === entry.id ? "on" : ""}" data-action="craft-${entry.id}">${entry.name}</button>`).join("")}
         </div>
         <div class="wheel" data-wheel>
           ${recipes.map((recipe) => {
             const active = Idle.state.activity && Idle.state.activity.profession === "crafting" && Idle.state.activity.id === recipe.id;
             const cost = Object.entries(recipe.cost).map(([id, qty]) => `${id.replaceAll("_", " ")} x${qty}`).join(", ");
-            return `<button class="node wheel-item ${active ? "active" : ""}" data-craft="${recipe.id}"><span class="swatch">${this.iconHtml(recipe.id, recipe)}</span><span class="node-copy"><span class="node-name">${recipe.name}</span><span class="node-stat">Lvl ${recipe.level} · ${cost}</span></span></button>`;
+            const coins = recipe.coins ? ` + ${recipe.coins} coins` : "";
+            return `<button class="node wheel-item ${active ? "active" : ""}" data-craft="${recipe.id}"><span class="swatch">${this.iconHtml(recipe.id, recipe)}</span><span class="node-copy"><span class="node-name">${recipe.name}</span><span class="node-stat">Lvl ${recipe.level} · ${cost}${coins}</span></span></button>`;
           }).join("")}
         </div>
       </section>
@@ -1237,6 +1288,7 @@ Idle.ui = {
     Idle.state.activity = on ? null : { profession: "crafting", id };
     Idle.state.running = Boolean(Idle.state.activity);
     this.tickStartedAt = performance.now();
+    if (id.includes("plank") && Idle.state.activity) Idle.systems.sound.play("saw_wood_lp", false);
     this.render();
   },
 
@@ -1337,6 +1389,7 @@ Idle.ui = {
     const cooking = Idle.state.activity && Idle.state.activity.profession === "cooking";
     const anvil = Idle.state.activity && Idle.state.activity.profession === "anvil";
     const smithing = Idle.state.activity && Idle.state.activity.profession === "smithing";
+    const sawmill = Idle.state.activity && Idle.state.activity.profession === "crafting" && Idle.state.activity.id && Idle.state.activity.id.includes("plank");
     if (cooking && !this.cookingSound) this.cookingSound = Idle.systems.sound.play("cooking", true);
     if (!cooking && this.cookingSound) {
       this.cookingSound.pause();
@@ -3259,6 +3312,272 @@ Idle.ui = {
     this.setScreen("kelso");
   },
 
+  lumberyardScreen() {
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Lumber Yard</p><h1>Varrock Lumber Yard</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          <button class="pill" data-action="talk-sawmill_sal">Sawmill Sal</button>
+        </div>
+      </section>
+    `;
+  },
+
+  salDialog() {
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Sawmill Sal</p><h1>Sawmill Sal</h1></div>
+          <button class="text-btn" data-action="lumberyard">Back</button>
+        </div>
+        <p>Would you like to browse my wares or use my sawmill?</p>
+        <div class="bubbles">
+          <button class="pill" data-action="sal-shop">Browse</button>
+          <button class="pill" data-action="sal-sawmill">Use sawmill</button>
+        </div>
+      </section>
+    `;
+  },
+
+  salShop() {
+    Idle.state.sal = Idle.state.sal || {};
+    const stock = [
+      { id: "saw", stock: 2 }, { id: "bolt_of_cloth", stock: 100 },
+      { id: "bronze_nails", stock: 100 }, { id: "iron_nails", stock: 100 }, { id: "steel_nails", stock: 100 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.sal[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + 50000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + 50000;
+      Idle.state.sal[item.id] = entry;
+    });
+    const sellable = Idle.state.slots.filter(Boolean).filter((slot) => catalog[slot.id] && catalog[slot.id].sell > 0);
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Shop</p><h1>Sawmill Sal</h1></div>
+          <button class="text-btn" data-action="sal-dialog">Back</button>
+        </div>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.sal[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            const price = catalog[item.id] ? Math.round(catalog[item.id].sell * 1.3) : 0;
+            return `<button class="pill" data-action="buy-sal" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} (${entry.left}) · ${price} gp</button>`;
+          }).join("")}
+        </div>
+        <p class="kicker">Sell</p>
+        <div class="bubbles">
+          ${sellable.map((slot) => {
+            const pay = Math.round(catalog[slot.id].sell * 0.5);
+            return `<button class="pill" data-action="sell-sal" data-item="${slot.id}">${catalog[slot.id].name} × ${slot.qty} · ${pay} gp</button>`;
+          }).join("") || `<p class="hint">Nothing to sell.</p>`}
+        </div>
+      </section>
+    `;
+  },
+
+  buySal(id) {
+    const entry = Idle.state.sal && Idle.state.sal[id];
+    if (!entry || entry.left <= 0) return;
+    const catalog = Idle.systems.inventory.catalog();
+    const price = catalog[id] ? Math.round(catalog[id].sell * 1.3) : 0;
+    if (!this.takeCoins(price)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    entry.left -= 1;
+    if (!entry.next) entry.next = Date.now() + 50000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  sellSal(id) {
+    const catalog = Idle.systems.inventory.catalog();
+    const item = catalog[id];
+    if (!item || !item.sell) return;
+    if (!Idle.systems.inventory.removeQty(Idle.state.slots, id, 1)) return;
+    this.giveCoins(Math.round(item.sell * 0.5));
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  cainShop() {
+    Idle.state.cain = Idle.state.cain || {};
+    const stock = [
+      { id: "bucket", stock: 2, restock: 120 }, { id: "leather_body", stock: 1, restock: 60 },
+      { id: "logs", stock: 6, restock: 30 }, { id: "pot", stock: 1, restock: 50 },
+      { id: "pie_dish", stock: 1, restock: 50 }, { id: "jug", stock: 1, restock: 50 },
+      { id: "body_rune", stock: 1, restock: 60 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.cain[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + item.restock * 1000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + item.restock * 1000;
+      Idle.state.cain[item.id] = entry;
+    });
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Shop</p><h1>Monk Cain</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.cain[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            return `<button class="pill" data-action="buy-cain" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} (${entry.left}) · 15 gp</button>`;
+          }).join("")}
+        </div>
+        <p class="kicker">Kinetic Grab</p>
+        <p class="hint">Requires Magic 33. Costs 1 air rune and 1 law rune. 2.8s cast, 70% success.</p>
+        <div class="bubbles">
+          <button class="pill" data-action="kinetic" data-item="gold_bar">Gold bar</button>
+          <button class="pill" data-action="kinetic" data-item="gold">Gold ore</button>
+          <button class="pill" data-action="kinetic" data-item="ruby_ring">Ruby ring</button>
+          <button class="pill" data-action="kinetic" data-item="brass_necklace">Brass necklace</button>
+          <button class="pill" data-action="kinetic" data-item="coins">225 coins</button>
+        </div>
+      </section>
+    `;
+  },
+
+  buyCain(id) {
+    const entry = Idle.state.cain && Idle.state.cain[id];
+    if (!entry || entry.left <= 0) return;
+    if (!this.takeCoins(15)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    entry.left -= 1;
+    const restock = { bucket: 120, leather_body: 60, logs: 30, pot: 50, pie_dish: 50, jug: 50, body_rune: 60 }[id] || 50;
+    if (!entry.next) entry.next = Date.now() + restock * 1000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  kineticGrab(item) {
+    const skill = Idle.state.combatSkills.magic;
+    if ((skill.level || 1) < 33) {
+      Idle.state.pushLog({ kind: "locked", text: "Requires Magic 33." });
+      this.render();
+      return;
+    }
+    if (Idle.systems.inventory.count(Idle.state.slots, "air_rune") < 1 || Idle.systems.inventory.count(Idle.state.slots, "law_rune") < 1) {
+      Idle.state.pushLog({ kind: "full", text: "Need 1 air rune and 1 law rune." });
+      this.render();
+      return;
+    }
+    this.stopOther();
+    Idle.state.activity = { profession: "kinetic", id: item, until: performance.now() + 2800 };
+    Idle.state.running = true;
+    this.tickStartedAt = performance.now();
+    Idle.state.pushLog({ kind: "pick", text: "Casting Kinetic Grab..." });
+    this.render();
+  },
+
+  gemTrader() {
+    Idle.state.gems = Idle.state.gems || {};
+    const stock = [
+      { id: "uncut_sapphire", stock: 1, restock: 600 }, { id: "uncut_emerald", stock: 1, restock: 720 },
+      { id: "uncut_ruby", stock: 1, restock: 900 }, { id: "uncut_diamond", stock: 1, restock: 1800 },
+      { id: "sapphire", stock: 1, restock: 2400 }, { id: "emerald", stock: 1, restock: 3000 },
+      { id: "ruby", stock: 1, restock: 1200 }, { id: "diamond", stock: 1, restock: 2400 },
+    ];
+    const catalog = Idle.systems.inventory.catalog();
+    const now = Date.now();
+    stock.forEach((item) => {
+      const entry = Idle.state.gems[item.id] || { left: item.stock, next: 0 };
+      if (entry.left < item.stock && entry.next && now >= entry.next) {
+        entry.left += 1;
+        entry.next = now + item.restock * 1000;
+      }
+      if (entry.left < item.stock && !entry.next) entry.next = now + item.restock * 1000;
+      Idle.state.gems[item.id] = entry;
+    });
+    const sellable = Idle.state.slots.filter(Boolean).filter((slot) => catalog[slot.id] && catalog[slot.id].sell > 0);
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Shop</p><h1>Gem trader</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          ${stock.map((item) => {
+            const entry = Idle.state.gems[item.id];
+            const name = catalog[item.id] ? catalog[item.id].name : item.id.replaceAll("_", " ");
+            const price = catalog[item.id] ? catalog[item.id].sell : 0;
+            return `<button class="pill" data-action="buy-gem" data-item="${item.id}" ${entry.left > 0 ? "" : "disabled"}>${name} (${entry.left}) · ${price} gp</button>`;
+          }).join("")}
+        </div>
+        <p class="kicker">Sell</p>
+        <div class="bubbles">
+          ${sellable.map((slot) => {
+            const pay = Math.round(catalog[slot.id].sell * 0.7);
+            return `<button class="pill" data-action="sell-gem" data-item="${slot.id}">${catalog[slot.id].name} × ${slot.qty} · ${pay} gp</button>`;
+          }).join("") || `<p class="hint">Nothing to sell.</p>`}
+        </div>
+      </section>
+    `;
+  },
+
+  buyGem(id) {
+    const entry = Idle.state.gems && Idle.state.gems[id];
+    if (!entry || entry.left <= 0) return;
+    const catalog = Idle.systems.inventory.catalog();
+    const price = catalog[id] ? catalog[id].sell : 0;
+    if (!this.takeCoins(price)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
+      this.render();
+      return;
+    }
+    if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      Idle.state.pushLog({ kind: "full", text: "Inventory full." });
+      this.render();
+      return;
+    }
+    entry.left -= 1;
+    const restock = { uncut_sapphire: 600, uncut_emerald: 720, uncut_ruby: 900, uncut_diamond: 1800, sapphire: 2400, emerald: 3000, ruby: 1200, diamond: 2400 }[id] || 600;
+    if (!entry.next) entry.next = Date.now() + restock * 1000;
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  sellGem(id) {
+    const catalog = Idle.systems.inventory.catalog();
+    const item = catalog[id];
+    if (!item || !item.sell) return;
+    if (!Idle.systems.inventory.removeQty(Idle.state.slots, id, 1)) return;
+    this.giveCoins(Math.round(item.sell * 0.7));
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
   kelsoScreen() {
     return `
       <section class="panel">
@@ -4419,6 +4738,11 @@ Idle.ui = {
     if (Idle.state.screen === "ali") return this.aliShop();
     if (Idle.state.screen === "outpost") return this.outpostScreen();
     if (Idle.state.screen === "kelso") return this.kelsoScreen();
+    if (Idle.state.screen === "cain") return this.cainShop();
+    if (Idle.state.screen === "gemtrader") return this.gemTrader();
+    if (Idle.state.screen === "lumberyard") return this.lumberyardScreen();
+    if (Idle.state.screen === "sal") return this.salDialog();
+    if (Idle.state.screen === "salshop") return this.salShop();
     if (Idle.state.screen === "wydin") return this.wydinShop();
     if (Idle.state.screen === "bank") return this.bank();
     if (Idle.state.screen === "spellbook") return this.spellbook();
@@ -4530,7 +4854,7 @@ Idle.ui = {
         <p>Magic: ${sign(bonus.magic)} · Range: ${sign(bonus.range)}</p>
         <p class="kicker">Defence bonus</p>
         <p>Stab: ${sign(bonus.dstab)} · Slash: ${sign(bonus.dslash)} · Crush: ${sign(bonus.dcrush)}</p>
-        <p>Magic: ${sign(bonus.dmagic)} · Range: ${sign(bonus.drange)}</p>
+        <p>Magic: ${sign(bonus.dmagic)} · Range: ${sign(bonus.drange)} · Heat: ${sign(this.heatDefense())}</p>
         <p class="kicker">Other bonuses</p>
         <p>Melee str: ${sign(bonus.strength)} · Ranged str: ${sign(bonus.rangedStrength)}</p>
         <p>Magic dmg: ${bonus.magicDamage}% · Prayer: ${sign(bonus.prayer)}</p>
@@ -4809,6 +5133,12 @@ Idle.ui = {
         if (action === "open-agility") this.setScreen("agility");
         if (action === "open-runecrafting") this.setScreen("runecrafting");
         if (action === "talk-aubury") this.talkAubury();
+    if (action === "talk-gem_trader") this.setScreen("gemtrader");
+    if (action === "talk-monk_cain") this.setScreen("cain");
+    if (action === "buy-cain") this.buyCain(el.dataset.item);
+    if (action === "kinetic") this.kineticGrab(el.dataset.item);
+    if (action === "buy-gem") this.buyGem(el.dataset.item);
+    if (action === "sell-gem") this.sellGem(el.dataset.item);
         if (action === "plant-flax") this.plantFlax();
         if (action === "harvest-flax") this.harvestFlax();
         if (action === "open-fishing") this.setScreen("fishing");
@@ -4891,7 +5221,23 @@ Idle.ui = {
     if (action === "talk-general_store") this.openStore();
     if (action === "talk-monk_fennec") this.setScreen("fennec");
     if (action === "talk-ali_morrisane") this.setScreen("ali");
-    if (action === "talk-kelso") this.talkKelso();
+    if (action === "open-lumberyard") {
+      this.stopOther();
+      Idle.state.place = "walking";
+      Idle.state.leave = { steps: [{ label: "Walking to Lumber Yard", travel: 5 }], step: 0, startedAt: performance.now(), next: { place: "lumberyard" }, town: false };
+      Idle.state.pushLog({ kind: "pick", text: "Walking to Lumber Yard. 5 seconds." });
+      this.render();
+    }
+    if (action === "lumberyard") this.setScreen("lumberyard");
+    if (action === "talk-sawmill_sal") this.setScreen("sal");
+    if (action === "sal-dialog") this.setScreen("sal");
+    if (action === "sal-shop") this.setScreen("salshop");
+    if (action === "sal-sawmill") {
+      this.craftStation = "sawmill";
+      this.setScreen("crafting");
+    }
+    if (action === "buy-sal") this.buySal(el.dataset.item);
+    if (action === "sell-sal") this.sellSal(el.dataset.item);
     if (action === "kelso-yes") this.acceptKelso();
     if (action === "kelso-no") this.setScreen("town");
     if (action === "turnin-exquisite") this.turnInExquisite();
@@ -5157,6 +5503,7 @@ Idle.ui = {
     if (item.desc) lines.push(item.desc);
     if (Idle.data.altarFish[id]) lines.push(`Altar ${Idle.data.altarFish[id].prayer} Prayer · ${Idle.data.altarFish[id].seconds}s`);
     if (item.equip) lines.push(`Worn: ${item.equip}${item.hands === 2 ? " · two-handed" : ""}`);
+    if (item.heat) lines.push(`Heat def: ${item.heat}`);
     if (weapon) {
       if (weapon.speed) lines.push(`${weapon.attack || ""} · ${weapon.speed}s${weapon.styles && weapon.styles.length ? ` · ${weapon.styles.join(", ")}` : ""}`.trim());
       if (weapon.bonuses) {

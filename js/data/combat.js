@@ -49,6 +49,7 @@ Idle.data.weaponStats = {
   bronze_med_helm: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -3, dstab: 3, dslash: 4, dcrush: 2, magicDefence: -1, drange: 3, weight: 1.814 } },
   bronze_full_helm: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -6, range: -3, dstab: 4, dslash: 5, dcrush: 3, magicDefence: -1, drange: 4, weight: 2.721 } },
   cobbled_guard_helm: { speed: 0, attack: "crush", styles: [], bonuses: { dstab: 6, dslash: 5, dcrush: 6, magicDefence: -2, drange: 7, prayer: 1 } },
+  rusty_dagger: { speed: 2.4, attack: "slash", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: 2, slash: 4, crush: -4, magic: 1, drange: 1, strength: 3, weight: 0.423 } },
   bronze_sq_shield: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -6, dstab: 5, dslash: 6, dcrush: 4, drange: 5, weight: 3.628 } },
   bronze_kiteshield: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -8, range: -3, dstab: 5, dslash: 7, dcrush: 6, magicDefence: -1, drange: 6, weight: 5.443 } },
   bronze_plateskirt: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -21, range: -11, dstab: 8, dslash: 7, dcrush: 6, magicDefence: -4, drange: 7, weight: 8.164 } },
@@ -64,11 +65,21 @@ Idle.data.weaponStats = {
   staff_of_fire: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 9, magic: 10, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 10, strength: 6 } },
   amulet_of_accuracy: { speed: 0, attack: "crush", styles: [], bonuses: { stab: 4, slash: 4, crush: 4, magic: 4, range: 4 } },
   mooleta: { speed: 0, attack: "crush", styles: [], bonuses: { stab: 5, slash: 7, crush: 7, magic: -1, range: -1, dstab: 4, dslash: 8, dcrush: 8, magicDefence: -2, drange: -1, strength: 1 } },
-  cow_slippers: { speed: 0, attack: "crush", styles: [], bonuses: { dstab: 4, dslash: 4, dcrush: 4, drange: 3, magicDefence: 2, hitpoints: 5, farming: 2 } },
+    cow_slippers: { speed: 0, attack: "crush", styles: [], bonuses: { dstab: 4, dslash: 4, dcrush: 4, drange: 3, magicDefence: 2, hitpoints: 5, farming: 2 } },
+    iron_dagger: { speed: 2.4, attack: "stab", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: 5, slash: 3, crush: -4, magic: 1, magicDefence: 1, strength: 4 } },
+    iron_axe: { speed: 3, attack: "slash", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: -2, slash: 5, crush: 3, dslash: 1, strength: 7 } },
+    iron_mace: { speed: 2.4, attack: "crush", styles: ["accurate", "aggressive", "defensive", "controlled"], bonuses: { stab: 4, slash: -2, crush: 9, strength: 7, prayer: 1 } },
+    iron_med_helm: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -3, dstab: 4, dslash: 5, dcrush: 3, magicDefence: -1, drange: 4 } },
+    iron_bolts: { bonuses: { range: 0, rangedStrength: 46 } },
+    iron_sword: { speed: 2.5, attack: "slash", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: 6, slash: 4, crush: -2, dcrush: 1, dslash: 2, magicDefence: 0, strength: 7 } },
+    iron_dart: { speed: 1.8, attack: "ranged", styles: ["accurate", "rapid", "longrange"], bonuses: { rangedStrength: 2 } },
+    iron_full_helm: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -6, range: -3, dstab: 6, dslash: 7, dcrush: 5, magicDefence: -1, drange: 6} },
+
 };
 
 Idle.data.combatDrops = [
   { id: "staff", name: "Staff", sell: 15, swatch: "#8a6a3b", equip: "weapon", hands: 1 },
+  { id: "rusty_dagger", name: "Rusty dagger", sell: 25, swatch: "#8a6a3b", equip: "weapon", hands: 1 },
   { id: "magic_staff", name: "Magic staff", sell: 200, swatch: "#4a6a8a", equip: "weapon", hands: 1 },
   { id: "staff_of_air", name: "Staff of air", sell: 1500, swatch: "#e6e0d2", equip: "weapon", hands: 1 },
   { id: "staff_of_water", name: "Staff of water", sell: 1500, swatch: "#4a7ab8", equip: "weapon", hands: 1 },
@@ -256,10 +267,6 @@ Idle.data.combatDrops = [
   { id: "milky_mixture", name: "Milky mixture", sell: 0, swatch: "#e6e0d2" },
   { id: "hangover_cure", name: "Hangover cure", sell: 2, swatch: "#6a8f4a" },
   { id: "cow_slippers", name: "Cow slippers", sell: 3200, swatch: "#c9b18a", equip: "boots" },
-  { id: "iron_full_helm", name: "Iron full helm", sell: 61, swatch: "#8a8f96", equip: "helm" },
-  { id: "iron_platebody", name: "Iron platebody", sell: 75, swatch: "#8a8f96", equip: "body" },
-  { id: "iron_platelegs", name: "Iron platelegs", sell: 59, swatch: "#8a8f96", equip: "legs" },
-  { id: "iron_plateskirt", name: "Iron plateskirt", sell: 40, swatch: "#8a8f96", equip: "legs" },
   { id: "potato_seed", name: "Potato seed", sell: 5, swatch: "#c9a24a" },
   { id: "acorn", name: "Acorn", sell: 87, swatch: "#8a6a3b" },
   { id: "oak_logs", name: "Oak logs", sell: 34, swatch: "#8a6a3b" },
@@ -269,7 +276,11 @@ Idle.data.combatDrops = [
   { id: "captains_log", name: "Captain's log", sell: 0, swatch: "#6a4a2a" },
   { id: "old_cup", name: "Old cup", sell: 0, swatch: "#8a8f96" },
   { id: "hammer", name: "Hammer", sell: 0, swatch: "#8a8f96" },
-  { id: "saw", name: "Saw", sell: 239, swatch: "#8a8f96" },
+    { id: "saw", name: "Saw", sell: 239, swatch: "#8a8f96" },
+    { id: "iron_bolts", name: "Iron bolts", sell: 20, swatch: "#b87333", equip: "ammo" },
+    { id: "iron_dart", name: "Iron dart", sell: 9, swatch: "#b87333", equip: "weapon", hands: 1 },
+
+
 ];
 
 Idle.data.quests = {
@@ -408,8 +419,10 @@ Idle.data.quests = {
 };
 
 Idle.data.combines = [
-  { needs: ["flour", "pot"], result: "pot_of_flour" },
-  { needs: ["wizard_hat", "blue_dye"], result: "blue_wizard_hat", xp: { crafting: 2.5 } },
+    { needs: ["flour", "pot"], result: "pot_of_flour" },
+    { needs: ["iron_bolts_unf", "feather"], result: "Iron_bolts", xp: { fletching: 1.5 } },
+    { needs: ["iron_dart_tip", "feather"], result: "Iron_dart", xp: { fletching: 38 } },
+{ needs: ["wizard_hat", "blue_dye"], result: "blue_wizard_hat", xp: { crafting: 2.5 } },
 ];
 
 Idle.data.mobs = [
@@ -699,11 +712,11 @@ Idle.data.mobs = [
     drops: [
       { id: "bones", qty: 1 },
       { id: "raw_chicken", qty: 1 },
-      { id: "key_medium", qty: 1 },
     ],
     table: [
       { id: "feather", qty: 5, chance: 1 / 2 },
       { id: "feather", qty: 15, chance: 1 / 4 },
+      { id: "key_medium", qty: 1, chance: 1/200 },
       { id: "clue_scroll_beginner", chance: 1 / 300 },
       { id: "egg", qty: 1, chance: 0.5 },
     ],

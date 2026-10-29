@@ -161,6 +161,16 @@ Idle.boot = function boot() {
     };
     Idle.systems.xp.sync(Idle.state.skills.fishing);
   }
+  ["woodcutting", "farming", "fletching", "crafting", "firemaking", "sailing"].forEach((id) => {
+    if (saved.skills && saved.skills[id]) {
+      Idle.state.skills[id] = {
+        level: saved.skills[id].level || 1,
+        xp: saved.skills[id].xp || 0,
+        xpToNext: saved.skills[id].xpToNext || Idle.config.baseXpToLevel,
+      };
+      Idle.systems.xp.sync(Idle.state.skills[id]);
+    }
+  });
   Idle.state.active.mining = saved.active && saved.active.mining ? saved.active.mining : null;
   Idle.state.activity = saved.activity || (Idle.state.active.mining ? { profession: "mining", id: Idle.state.active.mining } : null);
   if (Idle.state.activity && Idle.state.activity.until) {
