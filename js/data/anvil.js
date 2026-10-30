@@ -38,6 +38,12 @@ Idle.data.anvilItems = [
     { id: "iron_full_helm", name: "Iron full helm", metal: "iron", level: 22, xp: 50, sell: 128, respawn: 3, cost: { iron_bar: 2 }, swatch: "#b87333", equip: "helm" },
     { id: "iron_keel_parts", name: "Iron keel parts", metal: "iron", level: 22, xp: 25, sell: 1021, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
     { id: "iron_limbs", name: "Iron limbs", metal: "iron", level: 23, xp: 25, sell: 108, respawn: 3, cost: { iron_bar: 1 }, swatch: "#b87333" },
-
+    { id: "iron_chainbody", name: "Iron chainbody", metal: "iron", level: 26, xp: 75.5, sell: 72, respawn: 3, cost: { iron_bar: 3 }, swatch: "#b87333", equip: "body" },
+    { id: "iron_kiteshield", name: "Iron kiteshield", metal: "iron", level: 27, xp: 75.5, sell: 58, respawn: 3, cost: { iron_bar: 3 }, swatch: "#b87333", equip: "shield" },
+    { id: "iron_claws", name: "Iron claws", metal: "iron", level: 28, xp: 50, sell: 167, respawn: 2.4, cost: { iron_bar: 2 }, swatch: "#b87333", equip: "weapon", hands: 2 },
+    { id: "iron_2h_sword", name: "Iron 2h sword", metal: "iron", level: 29, xp: 75.5, sell: 67, respawn: 3, cost: { iron_bar: 3 }, swatch: "#b87333", equip: "weapon", hands: 2 },
+    { id: "iron_platelegs", name: "Iron platelegs", metal: "iron", level: 31, xp: 75.5, sell: 90, respawn: 3, cost: { iron_bar: 3 }, swatch: "#b87333", equip: "legs" },
+    { id: "iron_plateskirt", name: "Iron plateskirt", metal: "iron", level: 31, xp: 75.5, sell: 69, respawn: 3, cost: { iron_bar: 3 }, swatch: "#b87333", equip: "legs" },
+    { id: "iron_platebody", name: "Iron platebody", metal: "iron", level: 33, xp: 125.5, sell: 54, respawn: 3, cost: { iron_bar: 5 }, swatch: "#b87333", equip: "body" },
 
 ];

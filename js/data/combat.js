@@ -74,6 +74,13 @@ Idle.data.weaponStats = {
     iron_sword: { speed: 2.5, attack: "slash", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: 6, slash: 4, crush: -2, dcrush: 1, dslash: 2, magicDefence: 0, strength: 7 } },
     iron_dart: { speed: 1.8, attack: "ranged", styles: ["accurate", "rapid", "longrange"], bonuses: { rangedStrength: 2 } },
     iron_full_helm: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -6, range: -3, dstab: 6, dslash: 7, dcrush: 5, magicDefence: -1, drange: 6} },
+    iron_chainbody: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -15, dstab: 10, dslash: 15, dcrush: 19, magicDefence: -3, drange: 12 } },
+    iron_kiteshield: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -8, range: -3, dstab: 8, dslash: 10, dcrush: 9, magicDefence: -1, drange: 9 } },
+    iron_claws: { speed: 2.4, attack: "slash", styles: ["accurate", "aggressive", "controlled", "defensive"], bonuses: { stab: 4, slash: 6, crush: -4, dstab: 2, dslash: 3, dcrush: 1, strength: 7 } },
+    iron_2h_sword: { speed: 4.2, attack: "slash", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: -4, slash: 13, crush: 10, magic: -4, drange: -1, strength: 14 } },
+    iron_platelegs: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -21, range: -11, dstab: 11, dslash: 10, dcrush: 10, magicDefence: -4, drange: 10 } },
+    iron_plateskirt: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -21, range: -11, dstab: 11, dslash: 10, dcrush: 10, magicDefence: -4, drange: 10 } },
+    iron_platebody: { speed: 0, attack: "crush", styles: [], bonuses: { magic: -30, range: -15, dstab: 21, dslash: 20, dcrush: 12, magicDefence: -6, drange: 20 } },
 
 };
 
