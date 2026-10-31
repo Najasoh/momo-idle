@@ -30,6 +30,11 @@ Idle.systems.combat = {
   },
 
   swingSeconds() {
+    if (Idle.state.spell && Idle.data.spells[Idle.state.spell]) {
+      const spell = Idle.data.spells[Idle.state.spell];
+      const style = Idle.state.castStyle || "standard";
+      return style === "flicker" ? Math.max(0.6, spell.speed - 0.2) : spell.speed;
+    }
     const weapon = this.weapon();
     return weapon ? weapon.speed : 2.4;
   },
@@ -59,8 +64,8 @@ Idle.systems.combat = {
 
   totals() {
     const total = {
-      stab: 0, slash: 0, crush: 0, magic: 0, range: 0,
-      dstab: 0, dslash: 0, dcrush: 0, dmagic: 0, drange: 0,
+      stab: 0, slash: 0, crush: 0, matk: 0, ratk: 0,
+      stabdef: 0, slashdef: 0, crushdef: 0, mdef: 0, rdef: 0,
       strength: 0, rangedStrength: 0, magicDamage: 0, prayer: 0,
       undead: 0, slayer: 0,
     };
@@ -71,13 +76,13 @@ Idle.systems.combat = {
       total.stab += bonus.stab || 0;
       total.slash += bonus.slash || 0;
       total.crush += bonus.crush || 0;
-      total.magic += bonus.magic || 0;
-      total.range += bonus.range || 0;
-      total.dstab += bonus.dstab || 0;
-      total.dslash += bonus.dslash || 0;
-      total.dcrush += bonus.dcrush || 0;
-      total.dmagic += bonus.magicDefence || 0;
-      total.drange += bonus.drange || 0;
+      total.matk += bonus.matk || bonus.magic || 0;
+      total.ratk += bonus.ratk || bonus.range || 0;
+      total.stabdef += bonus.stabdef || bonus.dstab || 0;
+      total.slashdef += bonus.slashdef || bonus.dslash || 0;
+      total.crushdef += bonus.crushdef || bonus.dcrush || 0;
+      total.mdef += bonus.mdef || bonus.magicDefence || 0;
+      total.rdef += bonus.rdef || bonus.drange || 0;
       total.strength += bonus.strength || 0;
       total.rangedStrength += bonus.rangedStrength || 0;
       total.magicDamage += bonus.magicDamage || 0;
@@ -90,7 +95,13 @@ Idle.systems.combat = {
 
   gearBonus(key) {
     const total = this.totals();
-    if (key === "magicDefence") return total.dmagic;
+    if (key === "magicDefence" || key === "mdef") return total.mdef;
+    if (key === "dstab" || key === "stabdef") return total.stabdef;
+    if (key === "dslash" || key === "slashdef") return total.slashdef;
+    if (key === "dcrush" || key === "crushdef") return total.crushdef;
+    if (key === "drange" || key === "rdef") return total.rdef;
+    if (key === "magic" || key === "matk") return total.matk;
+    if (key === "range" || key === "ratk") return total.ratk;
     return total[key] || 0;
   },
 
@@ -110,8 +121,57 @@ Idle.systems.combat = {
   },
 
   playerHit(mob) {
+    if (Idle.state.spell && Idle.data.spells[Idle.state.spell]) {
+      const spell = Idle.data.spells[Idle.state.spell];
+      const cost = spell.cost || {};
+      for (const [rune, qty] of Object.entries(cost)) {
+        if (Idle.systems.inventory.count(Idle.state.slots, rune) < qty) {
+          Idle.state.pushLog({ kind: "full", text: `Need ${qty} ${rune.replaceAll("_", " ")}.` });
+          return { damage: 0, max: 0 };
+        }
+      }
+      for (const [rune, qty] of Object.entries(cost)) {
+        Idle.systems.inventory.removeQty(Idle.state.slots, rune, qty);
+      }
+      const skills = Idle.state.combatSkills;
+      const style = Idle.state.castStyle || "standard";
+      const magicBonus = style === "accurate" ? 3 : style === "flicker" ? 1 : 0;
+      const lvl = skills.magic.level + magicBonus;
+      const max = spell.max(lvl);
+      const damage = this.roll(max, 0.8);
+      const xp = spell.xp || 0;
+      Idle.systems.xp.grant(skills.magic, xp);
+      if (style === "standard") {
+        Idle.systems.xp.grant(skills.magic, damage * 2);
+        Idle.systems.xp.grant(skills.hitpoints, damage * 1.33);
+      } else if (style === "defensive") {
+        Idle.systems.xp.grant(skills.magic, damage * 1.33);
+        Idle.systems.xp.grant(skills.defence, damage * 1);
+        Idle.systems.xp.grant(skills.hitpoints, damage * 1.33);
+      } else {
+        Idle.systems.xp.grant(skills.magic, damage * 2);
+        Idle.systems.xp.grant(skills.hitpoints, damage * 1.33);
+      }
+      if (spell.element === "air") Idle.systems.sound.play("spellairelement", false);
+      return { damage, max };
+    }
     const skills = Idle.state.combatSkills;
     const attackType = this.attackName();
+    if (attackType === "magic") {
+      const effectiveMagic = skills.magic.level + this.styleBonus("magic") + 8;
+      const attackRoll = effectiveMagic * (this.gearBonus("matk") + 64);
+      const defenceRoll = (mob.defence + 8) * ((mob.mdef || 0) + 64);
+      const base = this.maxHit(skills.magic.level, this.gearBonus("matk"), "magic");
+      const max = Math.floor(base * (1 + this.gearBonus("magicDamage") / 100));
+      return { damage: this.roll(max, this.hitChance(attackRoll, defenceRoll)), max };
+    }
+    if (attackType === "ranged" || attackType === "range") {
+      const effectiveRanged = skills.ranged.level + this.styleBonus("ranged") + 8;
+      const attackRoll = effectiveRanged * (this.gearBonus("ratk") + 64);
+      const defenceRoll = (mob.defence + 8) * ((mob.rdef || 0) + 64);
+      const max = this.maxHit(skills.ranged.level, this.gearBonus("rangedStrength"), "ranged");
+      return { damage: this.roll(max, this.hitChance(attackRoll, defenceRoll)), max };
+    }
     const effectiveAttack = skills.attack.level + this.styleBonus("attack") + 8;
     const attackRoll = effectiveAttack * (this.gearBonus(attackType) + 64);
     const effectiveDefence = mob.defence + 8;

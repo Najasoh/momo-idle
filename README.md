@@ -11,6 +11,8 @@ Open `index.html` from this folder in a browser. Do not open it from inside the 
 - Select a target and it ticks until you stop or inventory is full. One activity at a time.
 - Inventory is 31 stacks. Same item stacks. Click a slot to select, click another to move, or drag.
 - Currency is Coins (1 Coins = 1). Sell through the Grand Exchange in Varrock.
+- Combat styles sit at the top. Press Spell to switch to spell casting. Selecting a spell overrides melee. Closing Spell returns to your last melee style.
+- Wind Strike is bought as "Spellbook: Wind Strike" from the general store. Costs 1 air rune + 1 mind rune.
 
 ## Towns
 
@@ -38,6 +40,22 @@ Dungeons: Secured Stronghold, Catacomb of Famine, Pit of Pestilence, Sepulchre.
 - **Woodcutting** — needs an axe. Tree, oak, willow, yew.
 - **Firemaking** — light logs with a tinderbox. Campfire enables cooking.
 - **Farming** — hops patch for flax.
+- **Thieving** — pickpocket NPCs and stalls. 1.2s minimum.
+- **Agility** — rooftop courses. Varrock (level 30), Al Kharid (level 20).
+- **Runecrafting** — Water Altar in Lumbridge. Needs water talisman and rune/pure essence.
+
+## Combat
+
+- Melee styles: Accurate, Aggressive, Defensive, Controlled. Weapon determines options.
+- Spell casting: Standard, Defensive, Accurate, Flicker. Flicker reduces cast speed by 0.2s.
+- XP is granted per damage dealt based on the active style. Spell casts also grant the spell's base XP.
+- Flee is a 2.4s tick with a 10% fail chance. On fail you swing and the monster hits back.
+
+## Grand Exchange
+
+- Buy orders deduct coins immediately and play a coin sound. Orders take 1–30 seconds per item and arrive in the mailbox.
+- Sell listings use a price slider. Overpriced items take longer. Up to 8 listings.
+- Prices move every 30 seconds. Never drop below 75% of base sell price.
 - **Thieving** — pickpocket (1.2s) and stalls. Resist stuns 5s and damages.
 - **Agility** — Varrock rooftop course (level 30, 70s).
 - **Prayer** — bury bones, sacrifice at altar, recharge.

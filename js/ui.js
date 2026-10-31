@@ -317,8 +317,13 @@ Idle.ui = {
         const gasps = mob.id === "woman" ? female : male;
         Idle.systems.sound.play(gasps[Math.floor(Math.random() * gasps.length)], false);
       }
-      const xp = Idle.systems.combat.grantDamageXp(hit.damage);
-      this.combatLine(`You hit ${hit.damage} (max ${hit.max}). ${xp}`);
+      if (!Idle.state.spell) {
+        const xp = Idle.systems.combat.grantDamageXp(hit.damage);
+        this.combatLine(`You hit ${hit.damage} (max ${hit.max}). ${xp}`);
+      } else {
+        this.combatLine(`You cast ${Idle.data.spells[Idle.state.spell].name} for ${hit.damage} (max ${hit.max}).`);
+      }
+      this.refreshLive();
       if (fight.mobHp <= 0) this.defeatMob(mob, fight, now);
     }
     if (fight.phase === "fight" && mobSwings > (fight.mobSwings || 0)) {
@@ -656,6 +661,11 @@ Idle.ui = {
     const style = Idle.state.style || "accurate";
     const cs = Idle.state.combatSkills;
     const line = (id, name) => ({ name, level: cs[id].level, pct: Math.floor((cs[id].xp / cs[id].xpToNext) * 100) });
+    if (Idle.state.spell && Idle.data.spells[Idle.state.spell]) {
+      const castStyle = Idle.state.castStyle || "standard";
+      if (castStyle === "defensive") return { multi: [line("magic", "Magic"), line("defence", "Defence"), line("hitpoints", "Hitpoints")] };
+      return line("magic", "Magic");
+    }
     if (style === "aggressive") return line("strength", "Strength");
     if (style === "controlled") return { multi: [line("attack", "Attack"), line("strength", "Strength"), line("defence", "Defence")] };
     if (style === "defensive") return { multi: [line("defence", "Defence"), line("hitpoints", "Hitpoints")] };
@@ -687,8 +697,15 @@ Idle.ui = {
   },
 
   setScreen(screen) {
+    if (this.mailTimer) { clearInterval(this.mailTimer); this.mailTimer = null; }
     Idle.state.screen = screen;
     this.render();
+    if (screen === "mailbox") {
+      this.mailTimer = setInterval(() => {
+        if (Idle.state.screen === "mailbox") this.render();
+        else { clearInterval(this.mailTimer); this.mailTimer = null; }
+      }, 1000);
+    }
   },
 
   stopOther(except) {
@@ -1851,11 +1868,53 @@ Idle.ui = {
   },
 
   styleButtons() {
+    if (this.spellOpen) {
+      const castStyle = Idle.state.castStyle || "standard";
+      const styles = [
+        { id: "standard", name: "Standard" },
+        { id: "defensive", name: "Defensive" },
+        { id: "accurate", name: "Accurate" },
+        { id: "flicker", name: "Flicker" },
+      ];
+      return `<div class="metal-tabs style-tabs"><button class="tab on" data-action="spell-menu">Spell</button><button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button>${styles.map((s) => `<button class="tab ${castStyle === s.id ? "on" : ""}" data-action="cast-style" data-cast="${s.id}">${s.name}</button>`).join("")}</div>${this.spellMenu()}`;
+    }
     const weapon = Idle.systems.combat.weapon();
     const styles = weapon ? weapon.styles : ["accurate", "aggressive", "defensive"];
     const names = weapon && weapon.styleNames ? weapon.styleNames : styles;
     const attacks = weapon && weapon.styleNames ? ["slash", "slash", "stab", "slash"] : [Idle.systems.combat.attackName()];
-    return `<div class="metal-tabs style-tabs">${styles.map((name, i) => `<button class="tab ${Idle.state.style === name ? "on" : ""}" data-style="${name}">${names[i] || name} · ${attacks[i] || attacks[0]}; ${name}</button>`).join("")}<button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button></div>`;
+    return `<div class="metal-tabs style-tabs"><button class="tab" data-action="spell-menu">Spell</button><button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button>${styles.map((name, i) => `<button class="tab ${Idle.state.style === name ? "on" : ""}" data-style="${name}">${names[i] || name} · ${attacks[i] || attacks[0]}; ${name}</button>`).join("")}</div>`;
+  },
+
+  spellMenu() {
+    if (!this.spellOpen) return "";
+    const known = Idle.state.spells || {};
+    if (Idle.systems.inventory.count(Idle.state.slots, "spellbook_wind_strike") > 0) known.wind_strike = true;
+    const spells = Object.keys(known).filter((id) => known[id]);
+    if (!spells.length) return `<div class="bubbles"><p class="hint">No spells known.</p></div>`;
+    return `<div class="bubbles">${spells.map((id) => {
+      const spell = Idle.data.spells[id];
+      const on = Idle.state.spell === id;
+      const cost = spell.cost ? Object.entries(spell.cost).map(([k, v]) => `${v} ${k.replaceAll("_", " ")}`).join(", ") : "";
+      return `<button class="pill ${on ? "on" : ""}" data-action="select-spell" data-spell="${id}">${spell.name}${on && cost ? ` · ${cost}` : ""}</button>`;
+    }).join("")}</div>`;
+  },
+
+  selectSpell(id) {
+    Idle.state.spell = Idle.state.spell === id ? null : id;
+    if (Idle.state.fight) {
+      Idle.state.fight.startedAt = performance.now();
+      Idle.state.fight.playerSwings = 0;
+    }
+    this.render();
+  },
+
+  setCastStyle(style) {
+    Idle.state.castStyle = style;
+    if (Idle.state.fight) {
+      Idle.state.fight.startedAt = performance.now();
+      Idle.state.fight.playerSwings = 0;
+    }
+    this.render();
   },
 
   combatBars(mob) {
@@ -2307,6 +2366,7 @@ Idle.ui = {
       { id: "flax_seed", stock: 10, restock: 30, price: 11 },
       { id: "needle", stock: 5, restock: 60, price: 106 },
       { id: "thread", stock: 10, restock: 30, price: 7 },
+      { id: "spellbook_wind_strike", stock: 1, restock: 60, price: 1 },
     ];
     const catalog = Idle.systems.inventory.catalog();
     const now = Date.now();
@@ -2337,12 +2397,6 @@ Idle.ui = {
         <div class="wheel">
           ${Idle.state.slots.filter(Boolean).map((slot) => {
             const item = catalog[slot.id];
-    if (slot.id === "bird_nest_seeds" || slot.id === "bird_nest_rings" || slot.id === "bird_nest_egg") {
-      this.openNest(slot.id);
-      Idle.state.selectedSlot = null;
-      this.render();
-      return;
-    }
             const price = Math.floor((Idle.state.prices[slot.id] || (item && item.sell) || 0) * 0.4);
             return `<button class="node wheel-item" data-action="sell-store" data-item="${slot.id}"><span class="node-copy" style="display:flex;gap:8px;white-space:nowrap"><span class="node-name" style="display:inline">${item ? item.name : slot.id}</span><span class="node-stat" style="display:inline">${price} gp</span></span></button>`;
           }).join("") || `<p class="hint">Nothing to sell.</p>`}
@@ -2352,25 +2406,34 @@ Idle.ui = {
   },
 
   buyStore(id) {
-    const prices = { pot: 1, jug: 1, shears: 1, knife: 7, bucket: 2, bowl: 5, cake_tin: 13, tinderbox: 1, chisel: 1, spade: 3, hammer: 1, flax_seed: 11 };
-    const entry = Idle.state.store[id];
-    if (!entry || entry.left <= 0) return;
+    const prices = { pot: 1, jug: 1, shears: 1, knife: 7, bucket: 2, bowl: 5, cake_tin: 13, tinderbox: 1, chisel: 1, spade: 3, hammer: 1, flax_seed: 11, needle: 106, thread: 7, spellbook_wind_strike: 1 };
+    Idle.state.store = Idle.state.store || {};
+    const entry = Idle.state.store[id] || { left: 1, next: 0, pct: 0 };
+    if (entry.left <= 0) {
+      Idle.state.pushLog({ kind: "full", text: "Out of stock." });
+      this.render();
+      return;
+    }
     const pct = entry.pct || 0;
-    const price = Math.max(1, Math.round(prices[id] * (1 + pct)));
+    const price = Math.max(1, Math.round((prices[id] || 1) * (1 + pct)));
     if (!this.takeCoins(price)) {
-      Idle.state.pushLog({ kind: "full", text: "Not enough gold." });
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
       this.render();
       return;
     }
     if (!Idle.systems.inventory.add(Idle.state.slots, id, 1)) {
+      this.giveCoins(price);
       Idle.state.pushLog({ kind: "full", text: "Inventory full." });
       this.render();
       return;
     }
+    if (id === "spellbook_wind_strike") {
+      Idle.state.spells = Idle.state.spells || {};
+      Idle.state.spells.wind_strike = true;
+      Idle.state.pushLog({ kind: "pick", text: "You learned Wind Strike." });
+    }
     entry.left -= 1;
-    const swing = (Math.floor(Math.random() * 3) + 1) / 100;
-    entry.pct = Math.max(-0.25, Math.min(0.25, (entry.pct || 0) + (Math.random() < 0.5 ? swing : -swing)));
-    if (!entry.next) entry.next = Date.now() + (id === "pot" || id === "bucket" ? 6 : id === "bowl" || id === "cake_tin" ? 30 : id === "shears" ? 100 : 60) * 1000;
+    Idle.state.store[id] = entry;
     Idle.systems.save.write(Idle.state);
     this.render();
   },
@@ -4851,10 +4914,10 @@ Idle.ui = {
       <div class="bonus-sheet">
         <p class="kicker">Attack bonus</p>
         <p>Stab: ${sign(bonus.stab)} · Slash: ${sign(bonus.slash)} · Crush: ${sign(bonus.crush)}</p>
-        <p>Magic: ${sign(bonus.magic)} · Range: ${sign(bonus.range)}</p>
+        <p>Magic: ${sign(bonus.matk)} · Range: ${sign(bonus.ratk)}</p>
         <p class="kicker">Defence bonus</p>
-        <p>Stab: ${sign(bonus.dstab)} · Slash: ${sign(bonus.dslash)} · Crush: ${sign(bonus.dcrush)}</p>
-        <p>Magic: ${sign(bonus.dmagic)} · Range: ${sign(bonus.drange)} · Heat: ${sign(this.heatDefense())}</p>
+        <p>Stab: ${sign(bonus.stabdef)} · Slash: ${sign(bonus.slashdef)} · Crush: ${sign(bonus.crushdef)}</p>
+        <p>Magic: ${sign(bonus.mdef)} · Range: ${sign(bonus.rdef)} · Heat: ${sign(this.heatDefense())}</p>
         <p class="kicker">Other bonuses</p>
         <p>Melee str: ${sign(bonus.strength)} · Ranged str: ${sign(bonus.rangedStrength)}</p>
         <p>Magic dmg: ${bonus.magicDamage}% · Prayer: ${sign(bonus.prayer)}</p>
@@ -5066,7 +5129,7 @@ Idle.ui = {
             <button class="btn" data-action="open-fletching" ${item && item.id === "knife" ? "" : "hidden"}>Fletching</button>
             <button class="btn" data-action="open-needle" ${item && item.id === "needle" ? "" : "hidden"}>Craft</button>
             <button class="btn" data-action="open-treasure" ${item && item.id === "one_eyed_hectors_treasure" ? "" : "hidden"}>Open</button>
-            <button class="btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
+            <button class="btn destroy-btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
             <button class="btn" data-action="deposit" ${item && Idle.state.screen === "bank" ? "" : "hidden"}>Deposit</button>
             <button class="btn" data-action="open-combine">Combine</button>
           </div>
@@ -5292,6 +5355,19 @@ Idle.ui = {
         if (action === "enter-pestilence") this.enterPestilence();
         if (action === "enter-sepulchre") this.enterSepulchre();
         if (action === "flee") this.flee();
+        if (action === "spell-menu") {
+          this.spellOpen = !this.spellOpen;
+          if (!this.spellOpen) {
+            Idle.state.spell = null;
+            if (Idle.state.fight) {
+              Idle.state.fight.startedAt = performance.now();
+              Idle.state.fight.playerSwings = 0;
+            }
+          }
+          this.render();
+        }
+        if (action === "select-spell") this.selectSpell(el.dataset.spell);
+        if (action === "cast-style") this.setCastStyle(el.dataset.cast);
         if (action === "open-spellbook") this.setScreen("spellbook");
         if (action === "cast-home") this.castHome();
         if (action === "retrieve-body") this.retrieveBody();
@@ -5478,8 +5554,11 @@ Idle.ui = {
       el.addEventListener("mousemove", (event) => {
         const box = document.querySelector("[data-preview]");
         if (box && !box.hidden) {
+          const boxH = 220;
+          let top = event.clientY + 16;
+          if (top + boxH > window.innerHeight) top = Math.max(8, event.clientY - boxH - 8);
           box.style.left = `${event.clientX + 16}px`;
-          box.style.top = `${event.clientY + 16}px`;
+          box.style.top = `${top}px`;
         }
       });
       el.addEventListener("mouseleave", () => this.hidePreview());
@@ -5519,8 +5598,11 @@ Idle.ui = {
       }
     }
     box.innerHTML = `<img src="images/${id}.png" alt="">${lines.map((line) => `<p>${line}</p>`).join("")}`;
+    const boxH = 220;
+    let top = event.clientY + 16;
+    if (top + boxH > window.innerHeight) top = Math.max(8, event.clientY - boxH - 8);
     box.style.left = `${event.clientX + 16}px`;
-    box.style.top = `${event.clientY + 16}px`;
+    box.style.top = `${top}px`;
     box.hidden = false;
   },
 

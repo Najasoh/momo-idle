@@ -2,6 +2,25 @@
 
 How to use this: each entry says what changed and which file to open if you want to edit it yourself. Open the zip, edit the file, save, refresh `index.html`.
 
+## 2026-10-31
+
+### Spell casting
+- Spell button next to melee styles. Opens a list of known spells and casting styles (Standard, Defensive, Accurate, Flicker).
+- Selecting a spell overrides melee, cancels the current swing, and starts the spell cast.
+- Closing the Spell button clears the selected spell and returns to the last melee style.
+- Wind Strike: buy "Spellbook: Wind Strike" from the general store (1 coin). Costs 1 air rune + 1 mind rune. 3s cast. Base max hit 2 (scales with magic level). Plays `sounds/spellairelement.wav`.
+- Casting styles: Standard (+2 Magic XP + 1.33 HP XP per damage), Defensive (+1.33 Magic + 1 Defence + 1.33 HP XP per damage), Accurate (+3 Magic level), Flicker (+1 Magic + 3 Defence, -0.2s cast speed).
+- Files: `js/data/combat.js` (`Idle.data.spells`), `js/systems/combat.js` (`playerHit`, `swingSeconds`), `js/ui.js` (`styleButtons`, `spellMenu`, `selectSpell`).
+
+### Grand Exchange
+- Buying an order now deducts coins from inventory. Plays a coin sound (`coins_cave01.wav` or `coins_cave02.wav`).
+- Files: `js/systems/exchange.js` (`addOrder`).
+
+### Equipment tooltips and Destroy
+- Hovering gloves, boots, or ring no longer pushes the tooltip off the bottom of the screen. It flips above the cursor if needed.
+- Destroy button is now light red so it is harder to confuse with Deposit.
+- Files: `js/ui.js` (`showPreview`), `css/game.css` (`.destroy-btn`).
+
 ## 2026-10-21
 
 ### Varrock combat

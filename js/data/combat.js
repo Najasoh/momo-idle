@@ -3,6 +3,10 @@
 window.Idle = window.Idle || {};
 Idle.data = Idle.data || {};
 
+Idle.data.spells = {
+  wind_strike: { id: "wind_strike", name: "Wind Strike", level: 1, speed: 3, xp: 5.5, base: 2, type: "combat", element: "air", cost: { air_rune: 1, mind_rune: 1 }, max: (lvl) => lvl < 5 ? 2 : lvl < 9 ? 4 : lvl < 13 ? 6 : 8 },
+};
+
 Idle.data.meleeStyles = {
   accurate: { skill: "attack", bonus: { attack: 3 }, xp: { attack: 4, hitpoints: 1.33 } },
   aggressive: { skill: "strength", bonus: { strength: 3 }, xp: { strength: 4, hitpoints: 1.33 } },
@@ -232,7 +236,7 @@ Idle.data.combatDrops = [
   { id: "skeleton_champion_scroll", name: "Skeleton champion scroll", sell: 0, swatch: "#e6e0d2" },
   { id: "big_bones", name: "Big bones", sell: 342, swatch: "#e6e0d2" },
   { id: "dragon_bones", name: "Dragon bones", sell: 3886, swatch: "#c9a24a" },
-  { id: "air_rune", name: "Air rune", sell: 0, swatch: "#e6e0d2" },
+  { id: "air_rune", name: "Air rune", sell: 6, swatch: "#e6e0d2" },
   { id: "fishing_bait", name: "Fishing bait", sell: 0, swatch: "#8a6a3b" },
   { id: "long_bone", name: "Long bone", sell: 5, swatch: "#e6e0d2" },
   { id: "curved_bone", name: "Curved bone", sell: 5, swatch: "#e6e0d2" },

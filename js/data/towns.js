@@ -118,7 +118,7 @@ Idle.data.towns = {
     professions: [],
     mobs: [
       { id: "wizard", name: "Wizard", note: "magic" },
-      { id: "imp", name: "Imp", note: "" },
+      { id: "imp", name: "Imp", note: "beads" },
     ],
     npcs: [
       { id: "wizard_mizgog", name: "Wizard Mizgog", quest: "imp_catcher", note: "Imp Catcher" },

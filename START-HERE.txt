@@ -1,5 +1,0 @@
-1. Unzip this whole folder. Do not open the html from inside the zip window.
-2. Open the unzipped folder.
-3. Double-click index.html.
-4. If the page says the game files did not load, the js folder is not next to index.html.
-5. mining-game.html is a single file that can be double-clicked by itself. Icons need the images folder beside it.

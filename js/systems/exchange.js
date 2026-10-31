@@ -36,8 +36,14 @@ Idle.systems.exchange = {
     this.ensure(state);
     const item = Idle.systems.inventory.catalog()[id];
     if (!item || qty < 1) return;
+    const price = state.prices[id] || item.sell || 0;
+    const total = price * qty;
+    if (Idle.systems.inventory.count(state.slots, "coins") < total) return "Not enough coins.";
+    Idle.systems.inventory.removeQty(state.slots, "coins", total);
+    const coins = ["coins_cave01", "coins_cave02"];
+    Idle.systems.sound.play(coins[Math.floor(Math.random() * coins.length)], false);
     const each = 1 + Math.floor(Math.random() * 30);
-    state.orders.push({ id, qty, left: qty, each, startedAt: performance.now(), price: state.prices[id] || item.sell });
+    state.orders.push({ id, qty, left: qty, each, startedAt: performance.now(), price });
   },
 
   sellSeconds(percent) {

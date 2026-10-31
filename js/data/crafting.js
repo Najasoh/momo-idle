@@ -15,6 +15,8 @@ Idle.data.craftingItems = [
   { id: "flax", name: "Flax", sell: 2, swatch: "#c9b18a" },
   { id: "flax_seed", name: "Flax seed", sell: 11, swatch: "#8a6a3b" },
   { id: "bow_string", name: "Bow string", sell: 252, swatch: "#d7c4a8" },
+  { id: "needle", name: "Needle", sell: 106, swatch: "#8a8f96" },
+  { id: "spellbook_wind_strike", name: "Spellbook: Wind Strike", sell: 1, swatch: "#6a8a9a", desc: "Teaches Wind Strike." },
   { id: "pie_dish", name: "Pie dish", sell: 3, swatch: "#c4a886" },
   { id: "sapphire", name: "Sapphire", sell: 160, swatch: "#4a6ad4" },
   { id: "ruby", name: "Ruby", sell: 680, swatch: "#d44a4a" },
