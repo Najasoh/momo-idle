@@ -20,6 +20,7 @@ Idle.systems.xp = {
       need = this.requirement(skill.level);
     }
     skill.xpToNext = need;
+    if (gained > 0) Idle.systems.sound.play("levelup", false);
     return gained;
   },
 

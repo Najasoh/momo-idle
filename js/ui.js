@@ -38,6 +38,7 @@ Idle.ui = {
       this.paintFishTravel(now);
       this.paintQuestRun(now);
       this.paintCampfire(now);
+      this.paintBuffTimers();
       this.heatTick(now);
       this.refillDiscover(now);
       this.paintAmbience(now);
@@ -144,6 +145,7 @@ Idle.ui = {
         }
       }
       if (result.kind !== "idle") Idle.state.pushLog(result);
+      this.decayBuffs();
       this.syncActivitySound();
       Idle.systems.save.write(Idle.state);
       this.render();
@@ -455,7 +457,7 @@ Idle.ui = {
     const town = Idle.state.town;
     if (town !== "lumbridge" && town !== "varrock") return;
     if (!this.nextBird || now > this.nextBird) {
-      const birds = ["bird01", "bird02", "bird03", "bird04", "bird05"];
+      const birds = ["bird01", "bird02", "bird03", "bird04", "bird05", "bird06", "bird07", "bird08", "bird09", "bird10"];
       Idle.systems.sound.play(birds[Math.floor(Math.random() * birds.length)], false);
       this.nextBird = now + (8000 + Math.random() * 12000);
     }
@@ -1309,6 +1311,60 @@ Idle.ui = {
     this.render();
   },
 
+  gutBird() {
+    const index = Idle.state.selectedSlot;
+    const slot = Idle.state.slots[index];
+    if (!slot || slot.id !== "crimson_swift") return;
+    Idle.systems.inventory.removeQty(Idle.state.slots, "crimson_swift", 1);
+    Idle.systems.inventory.add(Idle.state.slots, "bones", 1);
+    Idle.systems.inventory.add(Idle.state.slots, "raw_bird_meat", 1);
+    const feathers = 5 + Math.floor(Math.random() * 6);
+    Idle.systems.inventory.add(Idle.state.slots, "feather", feathers);
+    Idle.state.pushLog({ kind: "pick", text: `Gutted crimson swift. ${feathers} feathers.` });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  cleanHerb() {
+    const index = Idle.state.selectedSlot;
+    const slot = Idle.state.slots[index];
+    if (!slot || !/grimy/i.test(slot.id)) return;
+    const skill = Idle.state.skills.herblore;
+    if (!skill || skill.level < 1) {
+      Idle.state.pushLog({ kind: "locked", text: "Need Herblore 1 to clean." });
+      this.render();
+      return;
+    }
+    const cleanId = slot.id.replace("grimy_", "");
+    Idle.systems.inventory.removeQty(Idle.state.slots, slot.id, 1);
+    Idle.systems.inventory.add(Idle.state.slots, cleanId, 1);
+    const levels = Idle.systems.xp.grant(skill, 2.5);
+    Idle.state.pushLog({ kind: "pick", text: `Cleaned ${cleanId.replaceAll("_", " ")}.`, levels });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  selectProfession(profession, id) {
+    const mod = Idle.professions[profession];
+    if (!mod) return;
+    const node = mod.nodeById(id);
+    if (!node) return;
+    const skill = Idle.state.skills[profession];
+    if (skill && skill.level < (node.level || 1)) return;
+    const on = Idle.state.activity && Idle.state.activity.profession === profession && Idle.state.activity.id === id;
+    if (on) {
+      Idle.state.activity = null;
+      Idle.state.running = false;
+    } else {
+      this.stopOther();
+      Idle.state.activity = { profession, id };
+      Idle.state.running = true;
+      this.tickStartedAt = performance.now();
+      Idle.state.pushLog({ kind: "pick", text: `Now ${profession === "herblore" ? "mixing" : "trapping"} ${node.name}.` });
+    }
+    this.render();
+  },
+
   selectNode(id) {
     const skill = Idle.state.skills.mining;
     const node = Idle.professions.mining.nodeById(id);
@@ -1410,6 +1466,7 @@ Idle.ui = {
     if (cooking && !this.cookingSound) this.cookingSound = Idle.systems.sound.play("cooking", true);
     if (!cooking && this.cookingSound) {
       this.cookingSound.pause();
+      this.cookingSound.currentTime = 0;
       this.cookingSound = null;
     }
     if (anvil && !this.anvilSound) this.anvilSound = Idle.systems.sound.play("anvil", true);
@@ -1434,6 +1491,44 @@ Idle.ui = {
     Idle.state.bury = { index: Idle.state.selectedSlot, startedAt: performance.now(), name: item.name };
     this.burySound = Idle.systems.sound.play("bury", true);
     Idle.state.pushLog({ kind: "pick", text: `Burying ${item.name}.` });
+    this.render();
+  },
+
+  decayBuffs() {
+    if (!Idle.state.buffs) return;
+    const before = Idle.state.buffs.length;
+    Idle.state.buffs.forEach((buff) => { buff.left -= 2.4; });
+    Idle.state.buffs = Idle.state.buffs.filter((buff) => buff.left > 0);
+    if (Idle.state.buffs.length !== before) this.render();
+  },
+
+  paintBuffTimers() {
+    document.querySelectorAll("[data-buff-left]").forEach((el) => {
+      const started = Number(el.dataset.buffLeft);
+      const left = Math.max(0, 60 - Math.floor((performance.now() - started) / 1000));
+      el.textContent = `${left}s`;
+      if (left <= 0) {
+        const before = (Idle.state.buffs || []).length;
+        Idle.state.buffs = (Idle.state.buffs || []).filter((b) => b.startedAt !== started);
+        if (Idle.state.buffs.length !== before) this.render();
+      }
+    });
+  },
+
+  drinkPotion() {
+    const index = Idle.state.selectedSlot;
+    const slot = Idle.state.slots[index];
+    if (!slot || !slot.id.startsWith("attack_potion")) return;
+    const next = slot.id === "attack_potion3" ? "attack_potion2" : slot.id === "attack_potion2" ? "attack_potion1" : null;
+    const atk = (Idle.state.combatSkills && Idle.state.combatSkills.attack && Idle.state.combatSkills.attack.level) || 1;
+    const boost = Math.floor(atk * 0.1) + 3;
+    Idle.state.buffs = Idle.state.buffs || [];
+    Idle.state.buffs = Idle.state.buffs.filter((buff) => buff.id !== "attack");
+    Idle.state.buffs.push({ id: "attack", name: "Attack potion", icon: slot.id, amount: boost, left: 60, startedAt: performance.now() });
+    Idle.systems.inventory.removeQty(Idle.state.slots, slot.id, 1);
+    if (next) Idle.systems.inventory.add(Idle.state.slots, next, 1);
+    Idle.state.pushLog({ kind: "pick", text: `Drank attack potion. +${boost} Attack for 60s.` });
+    Idle.systems.save.write(Idle.state);
     this.render();
   },
 
@@ -1649,6 +1744,57 @@ Idle.ui = {
     Idle.state.pushLog({ kind: "pick", text: Idle.state.activity ? `Now cooking ${recipe.name}.` : "Cooking paused." });
     Idle.systems.save.write(Idle.state);
     this.render();
+  },
+
+  herblore() {
+    const skill = Idle.state.skills.herblore;
+    const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
+    const potions = Idle.professions.herblore.nodes();
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Apothecary</p><h1>Herblore</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="level-block">
+          <div class="level-label">Herblore ${skill.level}</div>
+          <div class="xp-meta">${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</div>
+          <div class="bar xp-track"><span style="width:${pct}%"></span></div>
+        </div>
+        <div class="wheel">
+          ${potions.map((potion) => {
+            const active = Idle.state.activity && Idle.state.activity.profession === "herblore" && Idle.state.activity.id === potion.id;
+            const cost = Object.entries(potion.cost || {}).map(([id, qty]) => `${id.replaceAll("_", " ")} +${qty}`).join(", ");
+            return `<button class="node wheel-item ${active ? "active" : ""}" data-action="select-herblore" data-item="${potion.id}"><span class="node-name">${potion.name}</span><span class="node-stat">${cost}</span></button>`;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  hunter() {
+    const skill = Idle.state.skills.hunter;
+    const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
+    const traps = Idle.professions.hunter.nodes();
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <div><p class="kicker">Traps</p><h1>Hunter</h1></div>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="level-block">
+          <div class="level-label">Hunter ${skill.level}</div>
+          <div class="xp-meta">${this.formatXp(skill.xp)} / ${this.formatXp(skill.xpToNext)} xp</div>
+          <div class="bar xp-track"><span style="width:${pct}%"></span></div>
+        </div>
+        <div class="wheel">
+          ${traps.map((trap) => {
+            const active = Idle.state.activity && Idle.state.activity.profession === "hunter" && Idle.state.activity.id === trap.id;
+            return `<button class="node wheel-item ${active ? "active" : ""}" data-action="select-hunter" data-item="${trap.id}"><span class="node-name">${trap.name}</span><span class="node-stat">Bird snare</span></button>`;
+          }).join("")}
+        </div>
+      </section>
+    `;
   },
 
   cooking() {
@@ -2172,7 +2318,6 @@ Idle.ui = {
   },
 
   buffsPanel() {
-    if (!this.buffsOpen) return "";
     const buffs = [];
     const fire = Idle.state.campfire;
     if (fire && fire.phase === "cook") {
@@ -2187,6 +2332,12 @@ Idle.ui = {
       const left = Math.max(0, Math.ceil((Idle.state.heat.until - performance.now()) / 1000));
       buffs.push(`Heat ${left}s`);
     }
+    (Idle.state.buffs || []).forEach((buff) => {
+      if (buff.left > 0) {
+        const icon = buff.icon ? `<img src="images/${buff.icon}.png" alt="" style="width:28px;height:28px;vertical-align:middle">` : "";
+        buffs.push(`${icon}<span data-buff-left="${buff.startedAt || 0}">${Math.ceil(buff.left)}s</span>`);
+      }
+    });
     return `<div class="buffs-panel" style="padding:4px 8px;background:#1a1410;border-bottom:1px solid #3a2e22">${buffs.length ? buffs.join(" · ") : "No active buffs"}</div>`;
   },
 
@@ -4027,7 +4178,11 @@ Idle.ui = {
         <div class="stats-layout">
           <div>
             <p class="kicker">Combat ${Idle.systems.combat.level(skills)}</p>
-            <div class="stat-bubbles">${names.map((name) => `<span class="pill">${name} ${skills[name].level}</span>`).join("")}</div>
+            <div class="stat-bubbles">${names.map((name) => {
+              const boost = (Idle.state.buffs || []).filter((buff) => buff.id === name && buff.left > 0).reduce((sum, buff) => sum + (buff.amount || 0), 0);
+              const sign = boost > 0 ? ` +${boost}` : boost < 0 ? ` ${boost}` : "";
+              return `<span class="pill">${name} ${skills[name].level}${sign}</span>`;
+            }).join("")}</div>
           </div>
           <div>
             <p class="kicker">Professions</p>
@@ -4787,6 +4942,8 @@ Idle.ui = {
     if (Idle.state.screen === "thieving") return this.thieving();
     if (Idle.state.screen === "agility") return this.agility();
     if (Idle.state.screen === "runecrafting") return this.runecrafting();
+    if (Idle.state.screen === "herblore") return this.herblore();
+    if (Idle.state.screen === "hunter") return this.hunter();
     if (Idle.state.screen === "fishing") return this.fishing();
     if (Idle.state.screen === "altar") return this.altar();
     if (Idle.state.screen === "equipment") return this.equipment();
@@ -5125,11 +5282,14 @@ Idle.ui = {
             <button class="btn" data-action="open-bag" ${item && item.id === "looting_bag" ? "" : "hidden"}>Open bag</button>
             <button class="btn" data-action="bury" ${item && /bones/i.test(item.name) ? "" : "hidden"}>Bury</button>
             <button class="btn" data-action="eat" ${item && item.heal ? "" : "hidden"}>Eat · +${item && item.heal ? item.heal : 0}</button>
+            <button class="btn drink-btn" data-action="drink" ${item && item.dose ? "" : "hidden"}>Drink</button>
             <button class="btn" data-action="light-fire" ${item && item.id === "logs" ? "" : "hidden"}>Light campfire</button>
             <button class="btn" data-action="open-fletching" ${item && item.id === "knife" ? "" : "hidden"}>Fletching</button>
             <button class="btn" data-action="open-needle" ${item && item.id === "needle" ? "" : "hidden"}>Craft</button>
             <button class="btn" data-action="open-treasure" ${item && item.id === "one_eyed_hectors_treasure" ? "" : "hidden"}>Open</button>
             <button class="btn destroy-btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
+            <button class="btn clean-btn" data-action="clean" ${item && /grimy/i.test(item.name) ? "" : "hidden"}>Clean</button>
+            <button class="btn gut-btn" data-action="gut" ${item && item.id === "crimson_swift" ? "" : "hidden"}>Gut</button>
             <button class="btn" data-action="deposit" ${item && Idle.state.screen === "bank" ? "" : "hidden"}>Deposit</button>
             <button class="btn" data-action="open-combine">Combine</button>
           </div>
@@ -5191,6 +5351,8 @@ Idle.ui = {
         if (action === "open-firemaking") this.setScreen("firemaking");
         if (action === "open-farming") this.setScreen("farming");
         if (action === "open-fletching") this.setScreen("fletching");
+        if (action === "open-herblore") this.setScreen("herblore");
+        if (action === "open-hunter") this.setScreen("hunter");
         if (action === "open-needle") { Idle.state.screen = "crafting"; this.craftStation = "needle"; this.render(); }
         if (action === "open-thieving") this.setScreen("thieving");
         if (action === "open-agility") this.setScreen("agility");
@@ -5198,6 +5360,7 @@ Idle.ui = {
         if (action === "talk-aubury") this.talkAubury();
     if (action === "talk-gem_trader") this.setScreen("gemtrader");
     if (action === "talk-monk_cain") this.setScreen("cain");
+    if (action === "talk-monk_hotei") this.setScreen("hotei");
     if (action === "buy-cain") this.buyCain(el.dataset.item);
     if (action === "kinetic") this.kineticGrab(el.dataset.item);
     if (action === "buy-gem") this.buyGem(el.dataset.item);
@@ -5314,7 +5477,8 @@ Idle.ui = {
     if (action === "talk-grum") this.setScreen("grum");
     if (action === "buy-grum") this.buyGrum(el.dataset.item);
     if (action === "sell-grum") this.sellGrum(el.dataset.item);
-    if (action === "buy-hotei") this.buyHotei(el.dataset.item);
+    if (action === "select-herblore") this.selectProfession("herblore", el.dataset.item);
+    if (action === "select-hunter") this.selectProfession("hunter", el.dataset.item);
     if (action === "buy-store") this.buyStore(el.dataset.item);
     if (action === "buy-wydin") this.buyWydin(el.dataset.item);
     if (action === "sell-store") this.sellStore(el.dataset.item);
@@ -5377,6 +5541,7 @@ Idle.ui = {
         if (action === "farm-no") this.continueFarming(false);
         if (action === "bury" && Idle.state.selectedSlot !== null) this.startBury();
         if (action === "eat" && Idle.state.selectedSlot !== null) this.eatSelected();
+        if (action === "drink" && Idle.state.selectedSlot !== null) this.drinkPotion();
         if (action === "light-fire" && Idle.state.selectedSlot !== null) this.startCampfire();
         if (action === "open-treasure") this.openTreasure();
         if (action === "destroy" && Idle.state.selectedSlot !== null) {
@@ -5390,6 +5555,8 @@ Idle.ui = {
             this.render();
           }
         }
+        if (action === "clean" && Idle.state.selectedSlot !== null) this.cleanHerb();
+        if (action === "gut" && Idle.state.selectedSlot !== null) this.gutBird();
         if (action === "camp-yes") { this.askedCampfire = true; Idle.state.campfire = { phase: "light", startedAt: performance.now() }; this.render(); }
         if (action === "camp-no") { Idle.state.campfire = null; this.askedCampfire = false; this.render(); }
         if (action === "open-bag") this.bagOpen = !this.bagOpen;

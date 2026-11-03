@@ -20,6 +20,8 @@ Idle.data.towns = {
       { id: "firemaking", name: "Firemaking", note: "Light campfires" },
       { id: "farming", name: "Farming", note: "Hops patch" },
       { id: "fletching", name: "Fletching", note: "Knife and logs" },
+      { id: "herblore", name: "Herblore", note: "Mix potions" },
+      { id: "hunter", name: "Hunter", note: "Bird snares" },
     ],
     mobs: [
       { id: "chicken", name: "Chicken", note: "lvl 1" },

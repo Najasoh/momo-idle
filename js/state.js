@@ -25,6 +25,8 @@ Idle.state = {
     firemaking: Idle.professions.firemaking.createSkill(),
     farming: Idle.professions.farming.createSkill(),
     fletching: Idle.professions.fletching.createSkill(),
+    herblore: Idle.professions.herblore.createSkill(),
+    hunter: Idle.professions.hunter.createSkill(),
     thieving: Idle.professions.thieving.createSkill(),
     agility: Idle.professions.agility.createSkill(),
     slayer: { level: 1, xp: 0, xpToNext: Idle.config.baseXpToLevel },
@@ -161,7 +163,7 @@ Idle.boot = function boot() {
     };
     Idle.systems.xp.sync(Idle.state.skills.fishing);
   }
-  ["woodcutting", "farming", "fletching", "crafting", "firemaking", "sailing"].forEach((id) => {
+  ["woodcutting", "farming", "fletching", "crafting", "firemaking", "sailing", "herblore", "hunter"].forEach((id) => {
     if (saved.skills && saved.skills[id]) {
       Idle.state.skills[id] = {
         level: saved.skills[id].level || 1,

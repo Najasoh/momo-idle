@@ -95,6 +95,9 @@ button, input { font: inherit; color: inherit; }
 }
 
 .destroy-btn { color: #e07070; border-color: #e07070; }
+.clean-btn { color: #7ec8e3; border-color: #7ec8e3; }
+.gut-btn { color: #c070d0; border-color: #c070d0; }
+.drink-btn { color: #6a9a4a; border-color: #6a9a4a; }
 .gold-panel {
   position: absolute;
   right: 0;

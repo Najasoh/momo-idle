@@ -66,6 +66,8 @@ Idle.professions.fishing = {
       return { kind: "full", text: `Missing ${spot.consume.replaceAll("_", " ")}.` };
     }
     const fish = table[Math.floor(Math.random() * table.length)];
+    const fishingSounds = ["fishing1", "fishing2", "fishing3", "fishing4"];
+    Idle.systems.sound.play(fishingSounds[Math.floor(Math.random() * fishingSounds.length)], false);
     if (spot.consume) Idle.systems.inventory.removeQty(state.slots, spot.consume, 1);
     if (!Idle.systems.inventory.add(state.slots, fish.id, 1)) {
       state.activity = null;
