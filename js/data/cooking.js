@@ -27,7 +27,11 @@ Idle.data.cookingItems = [
   { id: "raw_tuna", name: "Raw tuna", sell: 42, swatch: "#c45b5b" },
   { id: "raw_tetra", name: "Raw tetra", sell: 10, swatch: "#c9a24a", blurb: "Used for altars." },
   { id: "raw_lobster", name: "Raw lobster", sell: 124, swatch: "#b4483a" },
-  { id: "raw_swordfish", name: "Raw swordfish", sell: 215, swatch: "#8d9aa8" },
+    { id: "raw_swordfish", name: "Raw swordfish", sell: 215, swatch: "#8d9aa8" },
+    { id: "seaweed", name: "Seaweed", sell: 6, swatch: "#8d9aa8" },
+    { id: "swamp_weed", name: "Swamp weed", sell: 223, swatch: "#8d9aa8" },
+    { id: "giant_seaweed", name: "Giant seaweed", sell: 25, swatch: "#8d9aa8" },
+
 ];
 
 Idle.data.altarFish = {
@@ -53,15 +57,10 @@ function food(id, name, level, xp, heal, sell, seconds, raw) {
 }
 
 Idle.data.cookingRecipes = [
-  {
-    id: "cooked_meat", name: "Cooked meat", level: 1, xp: 30, heal: 3, sell: 61, respawn: 2.4,
-    burn: 0.4, stopBurn: 35, burnt: "burnt_meat", swatch: "#8a4b32",
-    alternatives: ["raw_beef", "raw_bear_meat", "raw_boar_meat", "raw_rat_meat", "raw_yak_meat", "raw_impaler_meat"],
-    blurb: "Heals 3.",
-  },
+  { id: "cooked_meat", name: "Cooked meat", level: 1, xp: 30, heal: 3, sell: 61, respawn: 2.4, burn: 0.4, stopBurn: 35, burnt: "burnt_meat", swatch: "#8a4b32", alternatives: ["raw_beef", "raw_bear_meat", "raw_boar_meat", "raw_rat_meat", "raw_yak_meat", "raw_impaler_meat"], blurb: "Heals 3.", },
   food("cooked_shrimp", "Cooked shrimp", 1, 30, 3, 30, 2.4, "raw_shrimp"),
   food("cooked_crayfish", "Cooked crayfish", 1, 10, 2, 5, 2, "raw_crayfish"),
-  food("cooked_chicken", "Cooked chicken", 1, 30, 3, 63, 0.6, "raw_chicken"),
+  food("cooked_chicken", "Cooked chicken", 1, 30, 3, 63, 1.6, "raw_chicken"),
   food("cooked_anchovies", "Cooked anchovies", 1, 30, 1, 34, 2.4, "raw_anchovies"),
   food("cooked_sardine", "Cooked sardine", 1, 40, 4, 18, 0.6, "raw_sardine"),
   food("cooked_herring", "Cooked herring", 5, 50, 5, 20, 2.4, "raw_herring"),
@@ -75,6 +74,10 @@ Idle.data.cookingRecipes = [
   food("cooked_tetra", "Cooked tetra", 33, 31, 0, 0, 2.4, "raw_tetra"),
   food("cooked_lobster", "Cooked lobster", 40, 120, 12, 101, 2.4, "raw_lobster"),
   food("cooked_swordfish", "Cooked swordfish", 45, 140, 14, 216, 2.4, "raw_swordfish"),
+    { id: "sinew", name: "Sinew", level: 1, xp: 3, heal: 0, sell: 138, respawn: 0.6, burn: 0.1, stopBurn: 45, burnt: "burnt_meat", swatch: "#8a4b32", alternatives: ["raw_beef", "raw_bear_meat", "raw_boar_meat", "raw_rat_meat", "raw_yak_meat", "raw_impaler_meat"], },
+    { id: "soda_ash", name: "Soda ash", level: 1, xp: 1, heal: 0, sell: 19, respawn: 0.6, swatch: "#8a4b32", alternatives: ["seaweed", "swamp_weed", "giant_seaweed"], blurb: "", },
+
+
 ];
 
 Idle.data.cookingRecipes.forEach((recipe) => {

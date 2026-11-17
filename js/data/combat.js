@@ -69,8 +69,6 @@ Idle.data.weaponStats = {
     hedge_mage_focus: { speed: 0, attack: "crush", styles: [], bonuses: { magic: 2, dstab: 2, dslash: 1, dcrush: 3, drange: 1} },
     hedge_mage_mantle: { speed: 0, attack: "crush", styles: [], bonuses: { magic: 1, dstab: 1, dslash: 1, dcrush: 1, magicDefence: 2, drange: 1 } },
 
-
-
   shortbow: { speed: 2.4, attack: "ranged", styles: ["accurate", "rapid", "longrange"], bonuses: { range: 8 }, speeds: { accurate: 2.4, rapid: 1.8, longrange: 2.4 } },
   staff: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 7, magic: 4, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 4, strength: 3 } },
   magic_staff: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 10, magic: 10, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 10, strength: 7 } },

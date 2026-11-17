@@ -68,6 +68,7 @@ Idle.data.towns = {
     name: "Varrock",
     professions: [
       { id: "mining", name: "Mining", note: "Copper, tin, iron, clay, silver" },
+      { id: "crafting", name: "Crafting", note: "" },
       { id: "smithing", name: "Smithing", note: "Up to steel" },
       { id: "anvil", name: "Anvil", note: "Bronze, iron, steel" },
       { id: "woodcutting", name: "Woodcutting", note: "Trees, oak, willow, yew" },

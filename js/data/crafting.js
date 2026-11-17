@@ -3,9 +3,13 @@ window.Idle = window.Idle || {};
 Idle.data = Idle.data || {};
 
 Idle.data.craftingStations = [
-  { id: "spinning_wheel", name: "Spinning wheel", note: "Spin wool into balls" },
-  { id: "needle", name: "Needle", note: "Sew leather" },
-  { id: "sawmill", name: "Sawmill", note: "Make planks" },
+    { id: "spinning_wheel", name: "Spinning wheel", note: "" },
+    { id: "loom", name: "Loom", note: "Weaving" },
+    { id: "needle", name: "Needle", note: "Sew leather" },
+    { id: "sawmill", name: "Sawmill", note: "Make planks" },
+    { id: "moulding", name: "Mouldings", note: "for moulding items" },
+    { id: "chisel", name: "Chisel", note: "use your chisel" },
+    { id: "glassblowing", name: "Glassblowing Pipe", note: "" },
 ];
 
 Idle.data.craftingItems = [
@@ -74,6 +78,7 @@ Idle.data.craftingItems = [
   { id: "emerald_ring", name: "Emerald ring", sell: 539, swatch: "#3ab84a", equip: "ring" },
   { id: "ruby_ring", name: "Ruby ring", sell: 926, swatch: "#d44a4a", equip: "ring" },
   { id: "diamond_ring", name: "Diamond ring", sell: 1766, swatch: "#e8e8f0", equip: "ring" },
+  { id: "opal_ring", name: "Opal ring", sell: 768, swatch: "#a8a885", equip: "ring" },
   { id: "gold_necklace", name: "Gold necklace", sell: 141, swatch: "#e6c24a", equip: "neck" },
   { id: "sapphire_necklace", name: "Sapphire necklace", sell: 361, swatch: "#4a7aff", equip: "neck" },
   { id: "emerald_necklace", name: "Emerald necklace", sell: 576, swatch: "#3ab84a", equip: "neck" },
@@ -84,6 +89,7 @@ Idle.data.craftingItems = [
   { id: "emerald_amulet", name: "Emerald amulet", sell: 665, swatch: "#3ab84a", equip: "neck" },
   { id: "ruby_amulet", name: "Ruby amulet", sell: 1085, swatch: "#d44a4a", equip: "neck" },
   { id: "diamond_amulet", name: "Diamond amulet", sell: 1927, swatch: "#e8e8f0", equip: "neck" },
+    { id: "bucket_of_sand", name: "Bucket of sand", sell: 7, swatch: "#8a8f96" },
 ];
 
 Idle.data.craftingRecipes = [
@@ -123,5 +129,27 @@ Idle.data.craftingRecipes = [
   { id: "camphor_plank", station: "sawmill", name: "Camphor plank", level: 1, xp: 0, seconds: 1.6, cost: { camphor_logs: 1 }, coins: 2500, sell: 2714, swatch: "#8a7a5a" },
   { id: "ironwood_plank", station: "sawmill", name: "Ironwood plank", level: 1, xp: 0, seconds: 1.6, cost: { ironwood_logs: 1 }, coins: 5000, sell: 3611, swatch: "#5a4a3a" },
   { id: "rosewood_plank", station: "sawmill", name: "Rosewood plank", level: 1, xp: 0, seconds: 1.6, cost: { rosewood_logs: 1 }, coins: 7500, sell: 4671, swatch: "#6a3a3a" },
-  { id: "leather_cape", station: "needle", name: "Leather cape", level: 1, xp: 27, seconds: 1.8, cost: { leather: 1, thread: 1 }, sell: 8, swatch: "#8a6a3b", equip: "cape" },
+    { id: "leather_cape", station: "needle", name: "Leather cape", level: 1, xp: 27, seconds: 1.8, cost: { leather: 1, thread: 1 }, sell: 8, swatch: "#8a6a3b", equip: "cape" },
+    { id: "opal_ring", station: "moulding", name: "Opal ring", level: 1, xp: 10, seconds: 3, cost: { ring_mould: 1, opal: 1, silver_bar: 1 }, sell: 768, swatch: "#8a6a3b", equip: "ring" },
+    { id: "opal_necklace", station: "moulding", name: "Opal necklace", level: 16, xp: 35, seconds: 2, cost: { necklace_mould: 1, opal: 1, silver_bar: 1 }, sell: 711, swatch: "#8a6a3b", equip: "neck" },
+    { id: "opal", station: "chisel", name: "Opal", level: 1, xp: 15, seconds: 2, cost: { chisel: 0, uncut_opal: 1 }, sell: 177, swatch: "#8a6a3b", },
+    { id: "jade", station: "chisel", name: "Jade", level: 13, xp: 20, seconds: 2, cost: { chisel: 0, uncut_jade: 1 }, sell: 240, swatch: "#8a6a3b", },
+    { id: "red_topaz", station: "chisel", name: "Red topaz", level: 16, xp: 25, seconds: 2, cost: { chisel: 0, uncut_red_topaz: 1 }, sell: 909, swatch: "#8a6a3b", },
+
+    { id: "jade_ring", station: "moulding", name: "Jade ring", level: 13, xp: 32, seconds: 2, cost: { ring_mould: 1, jade: 1, silver_bar: 1 }, sell: 689, swatch: "#8a6a3b", equip: "ring" },
+    { id: "topaz_ring", station: "moulding", name: "Red topaz ring", level: 16, xp: 35, seconds: 2, cost: { ring_mould: 1, red_topaz: 1, silver_bar: 1 }, sell: 1349, swatch: "#8a6a3b", equip: "ring" },
+    { id: "crossbow_string", station: "spinning_wheel", name: "Crossbow string", level: 10, xp: 15, seconds: 1.8, cost: { sinew: 1 }, sell: 245, swatch: "#5a4a3a" },
+    { id: "linen_yarn", station: "spinning_wheel", name: "Linen yarn", level: 12, xp: 16, seconds: 1.8, cost: { flax: 1 }, sell: 49, swatch: "#5a4a3a" },
+    { id: "magic_string", station: "spinning_wheel", name: "Magic string", level: 19, xp: 30, seconds: 1.8, cost: { magic_roots: 1 }, sell: 1176, swatch: "#5a4a3a" },
+    { id: "rope", station: "spinning_wheel", name: "Rope", level: 30, xp: 25, seconds: 1.8, cost: { hair: 1 }, sell: 77, swatch: "#5a4a3a" },
+    { id: "strip_of_cloth", station: "loom", name: "Strip of cloth", level: 10, xp: 25, seconds: 1.8, cost: { hair: 1 }, sell: 77, swatch: "#5a4a3a" },
+    { id: "beer_glass", station: "glassblowing", name: "Beer glass", level: 1, xp: 18, seconds: 1.8, cost: { molten_glass: 1 }, sell: 24, swatch: "#5a4a3a" },
+    { id: "empty_candle_lantern", station: "glassblowing", name: "Empty candle lantern", level: 4, xp: 18, seconds: 1.8, cost: { molten_glass: 1 }, sell: 7, swatch: "#5a4a3a" },
+    { id: "empty_oil_lamp", station: "glassblowing", name: "Empty oil lamp", level: 12, xp: 25, seconds: 1.8, cost: { molten_glass: 1 }, sell: 2, swatch: "#5a4a3a" },
+    { id: "vial", station: "glassblowing", name: "Vial", level: 33, xp: 35, seconds: 1.8, cost: { molten_glass: 1 }, sell: 3, swatch: "#5a4a3a" },
+    { id: "empty_fishbowl", station: "glassblowing", name: "Empty fishbowl", level: 42, xp: 42, seconds: 1.8, cost: { molten_glass: 1 }, sell: 57, swatch: "#5a4a3a" },
+    { id: "unpowered_orb", station: "glassblowing", name: "Unpowered orb", level: 46, xp: 52, seconds: 1.8, cost: { molten_glass: 1 }, sell: 59, swatch: "#5a4a3a" },
+    { id: "lantern_lens", station: "glassblowing", name: "Lantern lens", level: 49, xp: 55, seconds: 1.8, cost: { molten_glass: 1 }, sell: 5, swatch: "#5a4a3a" },
+    { id: "empty_light_orb", station: "glassblowing", name: "Empty light orb", level: 87, xp: 70, seconds: 1.8, cost: { molten_glass: 1 }, sell: 0, swatch: "#5a4a3a" },
+
 ];
