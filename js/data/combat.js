@@ -901,7 +901,8 @@ Idle.data.mobs = [
       { id: "clue_scroll_easy", chance: 1 / 128 },
     ],
     swatch: "#8a6a3b",
-  },
+    },
+
   {
     id: "woman",
     name: "Woman",
@@ -1436,7 +1437,40 @@ Idle.data.mobs = [
       { id: "larrans_key", chance: 1 / 942 },
     ],
     swatch: "#4a3a32",
-  },
+    },
+  {
+        id: "spider1",
+        name: "Spider",
+        level: 1,
+        area: "al_kharid",
+        travel: 35,
+        respawn: 5,
+        attackSpeed: 2.4,
+        style: "stab",
+        slayerXp: 0,
+        hp: 2,
+        attack: 1,
+        strength: 1,
+        defence: 1,
+        magic: 1,
+        ranged: 1,
+        aggressive: { stab: 0, slash: 10, crush: 10, magic: 0, ranged: 0, strength: -58 },
+        meleeDefence: { stab: 10, slash: 10, crush: 10 },
+        magicDefence: 10,
+        rangedDefence: { light: -53, standard: -53, heavy: -53 },
+        fireWeakness: 0.5,
+        poisonImmune: 0,
+        venomImmune: 0,
+        table: [
+            { id: "looting_bag", chance: 1 / 15 },
+            { id: "clue_scroll_beginner", chance: 1 / 128 },
+            { id: "larrans_key", chance: 1 / 1925 },
+            { id: "larrans_key", chance: 1 / 942 },
+            { id: "coins", qty: 8, chance: 1 / 3 },
+        ],
+        swatch: "#4a3a32",
+    },
+
   {
     id: "scorpion_14",
     name: "Scorpion",
@@ -1728,5 +1762,56 @@ Idle.data.mobs = [
     ],
     gemChance: 1 / 202,
     swatch: "#6a7a5a",
-  },
+    },
+    {
+        id: "alkharidwarrior9",
+        name: "Al kharid warrior",
+        level: 9,
+        travel: 10,
+        respawn: 3,
+        attackSpeed: 2.4,
+        style: "slash",
+        slayerXp: 4,
+        hp: 19,
+        attack: 7,
+        strength: 5,
+        defence: 4,
+        magic: 1,
+        ranged: 1,
+        aggressive: { stab: 10, slash: 9, crush: 0, magic: 0, ranged: 0 },
+        meleeDefence: { stab: 12, slash: 15, crush: 10 },
+        magicDefence: -1,
+        rangedDefence: { light: 12, standard: 12, heavy: 12 },
+        poisonImmune: 0,
+        venomImmune: 0,
+        drops: [{ id: "bones", qty: 1 }],
+        table: [
+      { id: "bronze_med_helm", qty: 1, chance: 1 / 64 },
+      { id: "iron_dagger", qty: 1, chance: 1 / 128 },
+      { id: "bronze_bolts", qty: 7, chance: 1 / 6 },
+      { id: "earth_rune", qty: 4, chance: 1 / 64 },
+      { id: "fire_rune", qty: 6, chance: 1 / 64 },
+      { id: "mind_rune", qty: 9, chance: 1 / 64 },
+      { id: "chaos_rune", qty: 2, chance: 1 / 128 },
+      { id: "coins", qty: 3, chance: 1 / 3 },
+      { id: "coins", qty: 10, chance: 1 / 5 },
+      { id: "coins", qty: 26, chance: 1 / 125 },
+      { id: "fishing_bait", chance: 1 / 25 },
+      { id: "copper_ore", chance: 1 / 64 },
+      { id: "earth_talisman", chance: 1 / 64 },
+      { id: "cabbage", chance: 1 / 64 },
+    ],
+        swatch: "#6a8f4a",
+    },
+
+
+
+
+
+
+
+
+
+
+
 ];

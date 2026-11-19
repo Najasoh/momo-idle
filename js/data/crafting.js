@@ -10,6 +10,7 @@ Idle.data.craftingStations = [
     { id: "moulding", name: "Mouldings", note: "for moulding items" },
     { id: "chisel", name: "Chisel", note: "use your chisel" },
     { id: "glassblowing", name: "Glassblowing Pipe", note: "" },
+    { id: "kiln", name: "Kiln", note: "" },
 ];
 
 Idle.data.craftingItems = [
@@ -93,28 +94,8 @@ Idle.data.craftingItems = [
 ];
 
 Idle.data.craftingRecipes = [
-  {
-    id: "ball_of_wool",
-    station: "spinning_wheel",
-    name: "Ball of wool",
-    level: 1,
-    xp: 2.5,
-    seconds: 1.8,
-    cost: { wool: 1 },
-    sell: 60,
-    swatch: "#d7c4a8",
-  },
-  {
-    id: "bow_string",
-    station: "spinning_wheel",
-    name: "Bow string",
-    level: 10,
-    xp: 15,
-    seconds: 1.8,
-    cost: { flax: 1 },
-    sell: 252,
-    swatch: "#d7c4a8",
-  },
+  {id: "ball_of_wool",station: "spinning_wheel",name: "Ball of wool",level: 1,xp: 2.5,seconds: 1.8,cost: { wool: 1 },sell: 60,swatch: "#d7c4a8",},
+  {id: "bow_string",station: "spinning_wheel",name: "Bow string",level: 10,xp: 15,seconds: 1.8,cost: { flax: 1 },sell: 252,swatch: "#d7c4a8",},
   { id: "leather_gloves", station: "needle", name: "Leather gloves", level: 1, xp: 13.8, seconds: 1.8, cost: { leather: 1, thread: 1 }, sell: 12, swatch: "#8a6a3b", equip: "gloves" },
   { id: "leather_boots", station: "needle", name: "Leather boots", level: 7, xp: 16.3, seconds: 1.8, cost: { leather: 1, thread: 1 }, sell: 58, swatch: "#8a6a3b", equip: "boots" },
   { id: "leather_cowl", station: "needle", name: "Leather cowl", level: 9, xp: 18.5, seconds: 1.8, cost: { leather: 1, thread: 1 }, sell: 16, swatch: "#8a6a3b", equip: "helm" },
@@ -151,5 +132,7 @@ Idle.data.craftingRecipes = [
     { id: "unpowered_orb", station: "glassblowing", name: "Unpowered orb", level: 46, xp: 52, seconds: 1.8, cost: { molten_glass: 1 }, sell: 59, swatch: "#5a4a3a" },
     { id: "lantern_lens", station: "glassblowing", name: "Lantern lens", level: 49, xp: 55, seconds: 1.8, cost: { molten_glass: 1 }, sell: 5, swatch: "#5a4a3a" },
     { id: "empty_light_orb", station: "glassblowing", name: "Empty light orb", level: 87, xp: 70, seconds: 1.8, cost: { molten_glass: 1 }, sell: 0, swatch: "#5a4a3a" },
+    { id: "unfired_pot", station: "kiln", name: "Unfired Pot", level: 1, xp: 6, seconds: 1.8, cost: { clay: 1, bucket_of_water: 1 }, sell: 169, swatch: "#5a4a3a" },
+    { id: "pot", station: "kiln", name: "Pot", level: 1, xp: 6, seconds: 1.8, cost: { clay: 2}, sell: 15, swatch: "#5a4a3a" },
 
 ];

@@ -181,9 +181,13 @@ Idle.data.towns = {
     professions: [
       { id: "agility", name: "Agility", note: "Rooftop course" },
       { id: "mining", name: "Mining", note: "Copper, tin, iron, silver, coal, gold, mithril, adamantite" },
+      { id: "thieving", name: "Thieving", note: "" },
     ],
     mobs: [
-      { id: "scorpion_14", name: "Scorpion", note: "Level 14" },
+        { id: "scorpion_14", name: "Scorpion", note: "" },
+        { id: "man", name: "Man", note: "" },
+        { id: "spider1", name: "Spider", note: "" },
+        { id: "alkharidwarrior9", name: "Al kharid warrior", note: "" },
     ],
     gather: [
       { id: "copper", name: "Copper", note: "Level 1" },
@@ -201,7 +205,10 @@ Idle.data.towns = {
       { id: "ali_morrisane", name: "Ali Morrisane", note: "" },
       { id: "kelso", name: "Kelso", note: "" },
     ],
-    services: [],
+      services: [
+          { id: "bank", name: "Bank", note: "Store items" },
+          { id: "altar", name: "Altar", note: "Recharge prayer" },
+      ],
   },
 };
 
