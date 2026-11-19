@@ -115,7 +115,7 @@ Idle.data.miningNodes = [
     respawn: 8,
     swatch: "#e4b65a",
     blurb: "No icon yet. Add images/gold.png.",
-    },
+  },
   {
     id: "mithril",
     name: "Mithril ore",

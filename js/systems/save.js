@@ -38,6 +38,7 @@ Idle.systems.save = {
       seenMobs: state.seenMobs,
       seenItems: state.seenItems,
       hops: state.hops,
+      slayerTask: state.slayerTask,
     };
     localStorage.setItem(Idle.config.saveKey, JSON.stringify(payload));
   },

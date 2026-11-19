@@ -4,7 +4,7 @@ Idle.systems = Idle.systems || {};
 Idle.systems.exchange = {
   listed() {
     return Object.values(Idle.systems.inventory.catalog())
-      .filter((item) => item && item.sell > 0 && item.name && !item.noGe)
+      .filter((item) => item && item.sell > 0 && item.name && !item.noGe && !(item.req && item.req.slayer))
       .sort((a, b) => a.name.localeCompare(b.name));
   },
 

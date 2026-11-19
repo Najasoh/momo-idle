@@ -69,6 +69,8 @@ Idle.data.weaponStats = {
     hedge_mage_focus: { speed: 0, attack: "crush", styles: [], bonuses: { magic: 2, dstab: 2, dslash: 1, dcrush: 3, drange: 1} },
     hedge_mage_mantle: { speed: 0, attack: "crush", styles: [], bonuses: { magic: 1, dstab: 1, dslash: 1, dcrush: 1, magicDefence: 2, drange: 1 } },
 
+
+
   shortbow: { speed: 2.4, attack: "ranged", styles: ["accurate", "rapid", "longrange"], bonuses: { range: 8 }, speeds: { accurate: 2.4, rapid: 1.8, longrange: 2.4 } },
   staff: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 7, magic: 4, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 4, strength: 3 } },
   magic_staff: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 10, magic: 10, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 10, strength: 7 } },
@@ -77,6 +79,7 @@ Idle.data.weaponStats = {
   staff_of_earth: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 7, magic: 10, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 10, strength: 5 } },
   staff_of_fire: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 9, magic: 10, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 10, strength: 6 } },
   amulet_of_accuracy: { speed: 0, attack: "crush", styles: [], bonuses: { stab: 4, slash: 4, crush: 4, magic: 4, range: 4 } },
+  slayertrackerscharm: { speed: 0, attack: "crush", styles: [], bonuses: { prayer: 1 } },
   mooleta: { speed: 0, attack: "crush", styles: [], bonuses: { stab: 5, slash: 7, crush: 7, magic: -1, range: -1, dstab: 4, dslash: 8, dcrush: 8, magicDefence: -2, drange: -1, strength: 1 } },
     cow_slippers: { speed: 0, attack: "crush", styles: [], bonuses: { dstab: 4, dslash: 4, dcrush: 4, drange: 3, magicDefence: 2, hitpoints: 5, farming: 2 } },
     iron_dagger: { speed: 2.4, attack: "stab", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: 5, slash: 3, crush: -4, magic: 1, magicDefence: 1, strength: 4 } },
@@ -116,6 +119,7 @@ Idle.data.combatDrops = [
   { id: "wizard_hat", name: "Wizard hat", sell: 299, swatch: "#6a4a8a", equip: "helm" },
   { id: "blue_dye", name: "Blue dye", sell: 363, swatch: "#4a7ab8" },
   { id: "amulet_of_accuracy", name: "Amulet of accuracy", sell: 2606, swatch: "#c9a24a", equip: "neck" },
+  { id: "slayertrackerscharm", name: "Slayer tracker charm", sell: 100, swatch: "#c9a24a", equip: "neck", req: { slayer: 5 } },
   { id: "bread_dough", name: "Bread dough", sell: 120, swatch: "#d7c4a8" },
   { id: "bread", name: "Bread", sell: 60, swatch: "#c9a24a" },
   { id: "cabbage", name: "Cabbage", sell: 1, swatch: "#6a8f4a" },
@@ -535,7 +539,7 @@ Idle.data.mobs = [
     respawn: 4,
     attackSpeed: 2.4,
     style: "crush",
-    slayerXp: 0,
+    slayerXp: 8,
     hp: 8,
     attack: 1,
     strength: 1,
@@ -901,8 +905,7 @@ Idle.data.mobs = [
       { id: "clue_scroll_easy", chance: 1 / 128 },
     ],
     swatch: "#8a6a3b",
-    },
-
+  },
   {
     id: "woman",
     name: "Woman",
@@ -1437,40 +1440,7 @@ Idle.data.mobs = [
       { id: "larrans_key", chance: 1 / 942 },
     ],
     swatch: "#4a3a32",
-    },
-  {
-        id: "spider1",
-        name: "Spider",
-        level: 1,
-        area: "al_kharid",
-        travel: 35,
-        respawn: 5,
-        attackSpeed: 2.4,
-        style: "stab",
-        slayerXp: 0,
-        hp: 2,
-        attack: 1,
-        strength: 1,
-        defence: 1,
-        magic: 1,
-        ranged: 1,
-        aggressive: { stab: 0, slash: 10, crush: 10, magic: 0, ranged: 0, strength: -58 },
-        meleeDefence: { stab: 10, slash: 10, crush: 10 },
-        magicDefence: 10,
-        rangedDefence: { light: -53, standard: -53, heavy: -53 },
-        fireWeakness: 0.5,
-        poisonImmune: 0,
-        venomImmune: 0,
-        table: [
-            { id: "looting_bag", chance: 1 / 15 },
-            { id: "clue_scroll_beginner", chance: 1 / 128 },
-            { id: "larrans_key", chance: 1 / 1925 },
-            { id: "larrans_key", chance: 1 / 942 },
-            { id: "coins", qty: 8, chance: 1 / 3 },
-        ],
-        swatch: "#4a3a32",
-    },
-
+  },
   {
     id: "scorpion_14",
     name: "Scorpion",
@@ -1762,56 +1732,5 @@ Idle.data.mobs = [
     ],
     gemChance: 1 / 202,
     swatch: "#6a7a5a",
-    },
-    {
-        id: "alkharidwarrior9",
-        name: "Al kharid warrior",
-        level: 9,
-        travel: 10,
-        respawn: 3,
-        attackSpeed: 2.4,
-        style: "slash",
-        slayerXp: 4,
-        hp: 19,
-        attack: 7,
-        strength: 5,
-        defence: 4,
-        magic: 1,
-        ranged: 1,
-        aggressive: { stab: 10, slash: 9, crush: 0, magic: 0, ranged: 0 },
-        meleeDefence: { stab: 12, slash: 15, crush: 10 },
-        magicDefence: -1,
-        rangedDefence: { light: 12, standard: 12, heavy: 12 },
-        poisonImmune: 0,
-        venomImmune: 0,
-        drops: [{ id: "bones", qty: 1 }],
-        table: [
-      { id: "bronze_med_helm", qty: 1, chance: 1 / 64 },
-      { id: "iron_dagger", qty: 1, chance: 1 / 128 },
-      { id: "bronze_bolts", qty: 7, chance: 1 / 6 },
-      { id: "earth_rune", qty: 4, chance: 1 / 64 },
-      { id: "fire_rune", qty: 6, chance: 1 / 64 },
-      { id: "mind_rune", qty: 9, chance: 1 / 64 },
-      { id: "chaos_rune", qty: 2, chance: 1 / 128 },
-      { id: "coins", qty: 3, chance: 1 / 3 },
-      { id: "coins", qty: 10, chance: 1 / 5 },
-      { id: "coins", qty: 26, chance: 1 / 125 },
-      { id: "fishing_bait", chance: 1 / 25 },
-      { id: "copper_ore", chance: 1 / 64 },
-      { id: "earth_talisman", chance: 1 / 64 },
-      { id: "cabbage", chance: 1 / 64 },
-    ],
-        swatch: "#6a8f4a",
-    },
-
-
-
-
-
-
-
-
-
-
-
+  },
 ];

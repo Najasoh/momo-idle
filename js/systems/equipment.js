@@ -41,6 +41,14 @@ Idle.systems.equipment = {
     if (slotId === "shield" && item.equip === "shield" && gear.shield && gear.shield !== item.id) return true;
     if (slotId === "shield" && this.twoHanded(gear)) return false;
     if (item.equip === "weapon" && item.hands === 2 && slotId !== "weapon") return false;
+    if (item.req) {
+      for (const [skill, need] of Object.entries(item.req)) {
+        const combat = Idle.state.combatSkills && Idle.state.combatSkills[skill];
+        const profession = Idle.state.skills && Idle.state.skills[skill];
+        const have = combat ? combat.level : (profession ? profession.level : 0);
+        if (have < need) return false;
+      }
+    }
     return true;
   },
 

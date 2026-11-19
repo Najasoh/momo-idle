@@ -68,13 +68,13 @@ Idle.data.towns = {
     name: "Varrock",
     professions: [
       { id: "mining", name: "Mining", note: "Copper, tin, iron, clay, silver" },
-      { id: "crafting", name: "Crafting", note: "" },
       { id: "smithing", name: "Smithing", note: "Up to steel" },
       { id: "anvil", name: "Anvil", note: "Bronze, iron, steel" },
       { id: "woodcutting", name: "Woodcutting", note: "Trees, oak, willow, yew" },
       { id: "cooking", name: "Cooking", note: "Cook food" },
       { id: "thieving", name: "Thieving", note: "Pickpocket and stalls" },
       { id: "agility", name: "Agility", note: "Rooftop course" },
+      { id: "slayerprof", name: "Slayer", note: "Fight assigned creatures" },
     ],
     gather: [
       { id: "tree", name: "Tree", note: "Needs an axe" },
@@ -106,6 +106,7 @@ Idle.data.towns = {
       { id: "aubury", name: "Aubury", quest: "rune_mysteries", note: "Rune Mysteries" },
       { id: "gem_trader", name: "Gem trader", note: "" },
       { id: "monk_cain", name: "Monk Cain", note: "" },
+      { id: "slayer_maniac", name: "Slayer Maniac", note: "Slayer tasks" },
     ],
     services: [
       { id: "exchange", name: "Grand Exchange", note: "Buy and sell" },
@@ -181,13 +182,9 @@ Idle.data.towns = {
     professions: [
       { id: "agility", name: "Agility", note: "Rooftop course" },
       { id: "mining", name: "Mining", note: "Copper, tin, iron, silver, coal, gold, mithril, adamantite" },
-      { id: "thieving", name: "Thieving", note: "" },
     ],
     mobs: [
-        { id: "scorpion_14", name: "Scorpion", note: "" },
-        { id: "man", name: "Man", note: "" },
-        { id: "spider1", name: "Spider", note: "" },
-        { id: "alkharidwarrior9", name: "Al kharid warrior", note: "" },
+      { id: "scorpion_14", name: "Scorpion", note: "Level 14" },
     ],
     gather: [
       { id: "copper", name: "Copper", note: "Level 1" },
@@ -205,10 +202,7 @@ Idle.data.towns = {
       { id: "ali_morrisane", name: "Ali Morrisane", note: "" },
       { id: "kelso", name: "Kelso", note: "" },
     ],
-      services: [
-          { id: "bank", name: "Bank", note: "Store items" },
-          { id: "altar", name: "Altar", note: "Recharge prayer" },
-      ],
+    services: [],
   },
 };
 

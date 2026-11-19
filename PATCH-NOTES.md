@@ -2,6 +2,141 @@
 
 How to use this: each entry says what changed and which file to open if you want to edit it yourself. Open the zip, edit the file, save, refresh `index.html`.
 
+## 2026-11-17
+
+### Herblore
+- New profession in Lumbridge. Mix potions at the herblore screen.
+- Guam leaf (347 ge). Grimy guam leaf (271 ge).
+- Clean button on any grimy item. Needs Herblore 1. Awards 2.5 XP and turns the grimy item into the clean version.
+- Attack potion recipe: 1 guam + 1 eye of newt. Needs Herblore 1. 25 XP. 1.8s. Produces Attack potion (3).
+- Files: `js/data/herblore.js`, `js/professions/herblore.js`, `js/data/towns.js` (Lumbridge professions), `js/ui.js` (`cleanHerb`, herblore screen).
+
+### Attack potions
+- Attack potion (3) 12 ge, (2) 11 ge, (1) 5 ge.
+- Drinking (3) leaves (2), (2) leaves (1), (1) is consumed.
+- Boost is floor(Attack × 0.1) + 3 for 60 seconds. Doses overwrite each other instead of stacking.
+- Buff shows the potion icon with a live second countdown. Stats tab shows +N next to the boosted stat while active.
+- Files: `js/data/combat.js` (potion items), `js/ui.js` (`drinkPotion`, `buffsPanel`, `combatStats`, `decayBuffs`).
+
+### Potion sounds
+- Crafting a potion randomly plays `sounds/bubble_goo.wav` or `sounds/bubble_brew.wav`.
+- File: `js/professions/herblore.js` (`tick`).
+
+### Hunter
+- New profession in Lumbridge. Bird snares required. Consumed only on a successful catch.
+- Trap limits: 2 at level 1, 3 at 40, 4 at 60, 5 at 80.
+- Catch chance starts at 39% and scales toward 100% in the high 40s.
+- Catch time is weighted toward 15–40 seconds.
+- Successful catch gives a Crimson swift item. Select it in inventory and press the purple Gut button to get bones, raw bird meat, and 5–10 feathers.
+- Files: `js/data/hunter.js`, `js/professions/hunter.js`, `js/data/towns.js`, `js/ui.js` (`gutBird`).
+
+### Skill saves
+- Herblore and Hunter experience now restore on load along with the other professions.
+- File: `js/state.js` (boot skill restore list).
+
+### Al Kharid
+- New town. 20 second walk from Lumbridge or Varrock.
+- Outpost Guard: pay 10 coins to cross. Same guard on both sides.
+- Monk Fennec: sells cabbage, jug of water, body rune, leather boots, bucket, bronze mace, fire rune, water rune. 20 coins each. 50s restock. No sell button.
+- Ali Morrisane: buys at 55% GE, sells at 100% GE. Stock includes pot, jug, waterskin(3), desert gear, fez, menaphite purple and red sets, runes.
+- Kelso: starts Exquisite Goods quest. Needs 3 leather, 2 cowhide, 5 spools of wool. Rewards 150 Crafting XP, 1 quest point, and unlocks menaphite gear + runes at Ali's shop.
+- Heat debuff: every 24–132 seconds in the gather or combat zones, a waterskin charge is used. No waterskin means 1–10 damage. Desert gear and fez have heat defense (12 each) that extends the timer. Max 132 seconds between drinks. Plays `sounds/waterskin.wav` on use.
+- Files: `js/data/towns.js` (al_kharid), `js/ui.js` (heat timer, outpost guard, shops).
+
+### Al Kharid combat and gather
+- Mobs: Scorpion (lvl 14), Spider (lvl 1), Al Kharid Warrior (lvl 9), Man.
+- Mining: copper, tin, iron, silver, coal, gold, mithril, adamantite. 5% chance a lvl 14 scorpion attacks while mining until combat level 28.
+- Agility: Al Kharid rooftop course (level 20, 64s, 8 parts). Parts 2 and 4 can fail for 1–5 damage. 216 XP max. Does not auto-repeat.
+- Files: `js/data/combat.js` (scorpion_14, spider1, alkharidwarrior9), `js/data/towns.js`, `js/data/thieving.js` (alkharid_rooftop).
+
+### Crafting expansion
+- New stations: Loom, Mouldings, Chisel, Glassblowing Pipe, Kiln.
+- Spinning wheel: crossbow string (sinew), linen yarn (flax), magic string (magic roots), rope (hair).
+- Loom: strip of cloth.
+- Chisel: cut uncut opal, jade, red topaz.
+- Moulding: opal/jade/red topaz rings and necklaces (needs mould + gem + silver bar).
+- Glassblowing: beer glass, empty candle lantern, empty oil lamp, vial, empty fishbowl, unpowered orb, lantern lens, empty light orb. All cost molten glass.
+- Kiln: unfired pot (clay + bucket of water), pot (clay).
+- Files: `js/data/crafting.js`.
+
+### Gem table
+- Added uncut opal (53 ge), uncut jade (72 ge), uncut red topaz (761 ge).
+- File: `js/data/gems.js`.
+
+### Cooking additions
+- Seaweed, swamp weed, giant seaweed.
+- Sinew: cook raw meat (any of the cooked meat alternatives). Level 1, 3 XP, 0.6s, sells 138.
+- Soda ash: cook seaweed / swamp weed / giant seaweed. Level 1, 1 XP, 0.6s, sells 19.
+- Files: `js/data/cooking.js`.
+
+### Smithing
+- Molten glass: 1 bucket of sand + 1 soda ash. Level 1, 22 XP, 2.4s, sells 88.
+- File: `js/data/smithing.js`.
+
+### Anvil — Hedge mage set and iron
+- Hedge mage: gloves, boots, hood, spellblade, tunic, focus, mantle. Mix of bronze bars and thread.
+- Rusty dagger: craft from a bronze dagger.
+- Full iron set: dagger, axe, mace, spit, med helm, bolt unf, sword, dart tip, nails, full helm, keel parts, limbs, chainbody, kiteshield, claws, 2h sword, platelegs, plateskirt, platebody.
+- File: `js/data/anvil.js`.
+
+### Combat items
+- Hedge mage set stats (hood, tunic, trousers, gloves, boots, spellblade, focus, mantle).
+- Iron weapon and armor stats (dagger, axe, mace, sword, dart, full helm, chainbody, kiteshield, claws, 2h sword).
+- Files: `js/data/combat.js` (weaponStats).
+
+### Woodcutting
+- Needs an axe. Higher tier trees need a better axe (oak needs wc 2, willow wc 4, yew wc 8).
+- 30% miss chance. After level 55 the miss rate drops toward 5%.
+- Oak, willow, and yew can drop leaves (1/4), ent seed (1/400), loop half of key (1/2407), beaver pet (1/360000), or a bird nest (seeds / rings / egg) instead of logs. Yew can also drop a crystal shard (1/40).
+- Respawn is 1–3 seconds after a successful chop.
+- File: `js/professions/woodcutting.js`.
+
+### Thieving
+- Fail plays a gasp sound. Man uses male gasps, Woman uses female gasps, others use either.
+- Success rate becomes 100% at the perfect level listed on the target.
+- After a success there is a 1–3 second walk to the next target. Fail stuns for 5 seconds and deals damage.
+- File: `js/professions/thieving.js`.
+
+### Fishing sounds
+- Each catch plays one of `fishing1.wav` through `fishing4.wav`.
+- File: `js/professions/fishing.js`.
+
+### Crafting thread
+- Thread has 5 uses. Each needle craft consumes 1 use. When uses hit 0 the spool is removed.
+- File: `js/professions/crafting.js`.
+
+### Sailing
+- Profession exists but stays locked until the Pandemonium quest is completed.
+- File: `js/professions/sailing.js`.
+
+### Combat formulas
+- Melee, ranged, and magic use the same attack roll / defence roll / max hit structure.
+- Magic damage % from gear multiplies spell max hit. Ranged strength is used for ranged max hit.
+- Spell cast styles: Standard, Defensive, Accurate (+3 magic), Flicker (+1 magic, +3 defence, -0.2s).
+- Files: `js/systems/combat.js` (`playerHit`, `maxHit`, `totals`).
+
+### Level up sound
+- Any profession or combat level up plays `sounds/levelup.wav`.
+- File: `js/systems/xp.js` (`grant`).
+
+### Looting bag
+- Only one looting bag can be in the inventory at a time.
+- File: `js/systems/inventory.js` (`add`).
+
+### Save data
+- Skills (including herblore and hunter), bank, hops, seen mobs, and seen items all save and load.
+- File: `js/systems/save.js`.
+
+### Images
+- `images/` now has 436 icons.
+- Added: hedge mage set (hood, tunic, trousers, gloves, boots, spellblade, focus, mantle), full iron set, desert gear, menaphite purple and red sets, fez, attack potion (3/2/1), guam / grimy guam, and many tree seeds.
+- Item icons are named after the item id (example: `hedge_mage_hood.png`).
+
+### Sounds
+- `sounds/` now has 69 files.
+- Categories: mining (pick_hit01–05), smithing, anvil, cooking, fishing1–4, bury, walk, teleport, grand exchange, coins, levelup, potion crafting (bubble_goo / bubble_brew), potion drink, waterskin, spell air element, bow draw / arrow hit, sawmill, bird ambience (bird01–10), bear death, player hit (gethit male/female 1–3), player death (death male/female), gasp (male/female).
+- Volume is controlled in Settings. File: `js/systems/sound.js`.
+
 ## 2026-10-31
 
 ### Spell casting

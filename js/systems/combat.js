@@ -277,8 +277,9 @@ Idle.systems.combat = {
       if (coins) give("coins", coins.qty);
     }
     if (mob.slayerXp) {
-      const levels = Idle.systems.xp.grant(Idle.state.combatSkills.slayer, mob.slayerXp);
-      names.push(`+${mob.slayerXp} slayer${levels ? `, Slayer ${Idle.state.combatSkills.slayer.level}` : ""}`);
+      const levels = Idle.systems.xp.grant(Idle.state.skills.slayer, mob.slayerXp);
+      Idle.systems.xp.grant(Idle.state.combatSkills.slayer, mob.slayerXp);
+      names.push(`+${mob.slayerXp} slayer${levels ? `, Slayer ${Idle.state.skills.slayer.level}` : ""}`);
     }
     return names;
   },

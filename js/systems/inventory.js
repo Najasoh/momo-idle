@@ -91,6 +91,7 @@ Idle.systems.inventory = {
     for (const item of Idle.data.fletchingItems || []) map[item.id] = item;
     for (const recipe of Idle.data.fletchingRecipes || []) map[recipe.id] = recipe;
     for (const drop of Idle.data.combatDrops || []) map[drop.id] = drop;
+    for (const item of Idle.data.slayerItems || []) map[item.id] = item;
     return map;
   },
 };

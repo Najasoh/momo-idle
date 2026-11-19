@@ -386,6 +386,16 @@ Idle.ui = {
     }
     if (mob.id === "brutus") Idle.state.brutusDefeated = true;
     if (mob.id === "goblin" || mob.id === "cave_goblin") Idle.state.goblinKills = (Idle.state.goblinKills || 0) + 1;
+    if (Idle.state.slayerTask && Idle.state.slayerTask.id === mob.id) {
+      Idle.state.slayerTask.left -= 1;
+      if (Idle.state.slayerTask.left <= 0) {
+        Idle.systems.inventory.add(Idle.state.slots, "slayer_coin", 1);
+        Idle.state.pushLog({ kind: "level", text: `Slayer task complete. +1 slayer coin.` });
+        Idle.state.slayerTask = null;
+      } else {
+        Idle.state.pushLog({ kind: "pick", text: `${Idle.state.slayerTask.left} ${mob.name} left.` });
+      }
+    }
     if (Idle.state.questRun && Idle.state.questRun.phase === "explore_cave" && mob.id === "cave_goblin") {
       const run = Idle.state.questRun;
       run.spawnedLeft = (run.spawnedLeft || 1) - 1;
@@ -3858,6 +3868,7 @@ Idle.ui = {
       { id: "thieving", name: "Thieving", note: "Pickpocket and stalls" },
       { id: "agility", name: "Agility", note: "Rooftop courses" },
       { id: "runecrafting", name: "Runecrafting", note: "Craft runes at altars" },
+      { id: "slayerprof", name: "Slayer", note: "Fight assigned creatures" },
       ...(Idle.state.quests && Idle.state.quests.pandemonium ? [{ id: "sailing", name: "Sailing", note: "Rafts and the Pandemonium" }] : []),
       { id: "altar", name: "Altar", note: "Sacrifice fish for Prayer" },
     ];
@@ -3876,6 +3887,79 @@ Idle.ui = {
         </div>
       </section>
     `;
+  },
+
+  slayer() {
+    const skill = Idle.state.skills.slayer;
+    const tasks = Idle.professions.slayer.nodes();
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <p class="kicker">Slayer ${skill.level}</p>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        <div class="bubbles">
+          ${tasks.map((task) => {
+            const mob = Idle.professions.slayer.mob(task.id);
+            const name = mob ? mob.name : task.id;
+            const locked = skill.level < (task.level || 1);
+            return `<button class="bubble ${locked ? "locked" : ""}" data-slayer="${task.id}" ${locked ? "disabled" : ""}>Lvl ${task.level || 1} ${name}</button>`;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  },
+
+  startSlayer(id) {
+    const task = Idle.professions.slayer.nodeById(id);
+    const mob = task ? Idle.professions.slayer.mob(id) : null;
+    if (!task || !mob) return;
+    if (!Idle.professions.slayer.canFight(Idle.state.skills.slayer, task)) return;
+    if (Idle.state.grave && Idle.state.grave.phase !== "choice") return;
+    Idle.state.area = null;
+    this.stopOther("fight");
+    Idle.state.leave = null;
+    Idle.state.running = false;
+    Idle.state.fight = { mob: id, phase: "travel", startedAt: performance.now(), playerHp: Idle.state.combatSkills.hitpoints.level, mobHp: mob.hp, playerSwings: 0, mobSwings: 0, slayer: true };
+    Idle.state.pushLog({ kind: "pick", text: `Walking to ${mob.name}. ${mob.travel || 15} seconds.` });
+    this.setScreen("adventure");
+  },
+
+  slayerManiac() {
+    const task = Idle.state.slayerTask;
+    return `
+      <section class="panel">
+        <div class="screen-head">
+          <p class="kicker">Slayer Maniac</p>
+          <button class="text-btn" data-action="hub">Back</button>
+        </div>
+        ${task ? `<p class="hint">Current task: ${task.need - task.left} / ${task.need} ${task.name}</p>` : `<p class="hint">No active task.</p>`}
+        <div class="bubbles">
+          <button class="bubble" data-action="buy-slayer-task" ${task ? "disabled" : ""}>Slayer Task Level 1 · 100 coins</button>
+        </div>
+      </section>
+    `;
+  },
+
+  buySlayerTask() {
+    if (Idle.state.slayerTask) {
+      Idle.state.pushLog({ kind: "full", text: "Finish your current task first." });
+      this.render();
+      return;
+    }
+    if (!this.takeCoins(100)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
+      this.render();
+      return;
+    }
+    const pool = Idle.data.slayerTasks.filter((task) => (task.level || 1) === 1);
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const mob = Idle.systems.combat.mobById(pick.id);
+    const need = 10 + Math.floor(Math.random() * 6);
+    Idle.state.slayerTask = { id: pick.id, name: mob ? mob.name : pick.id, need, left: need };
+    Idle.state.pushLog({ kind: "pick", text: `Slayer task: kill ${need} ${mob ? mob.name : pick.id}.` });
+    Idle.systems.save.write(Idle.state);
+    this.render();
   },
 
   weaponLine() {
@@ -4947,7 +5031,8 @@ Idle.ui = {
     if (Idle.state.screen === "fishing") return this.fishing();
     if (Idle.state.screen === "altar") return this.altar();
     if (Idle.state.screen === "equipment") return this.equipment();
-    if (Idle.state.screen === "professions") return this.professions();
+    if (Idle.state.screen === "slayer") return this.slayer();
+    if (Idle.state.screen === "slayer_maniac") return this.slayerManiac();
     if (Idle.state.screen === "adventure") return this.adventure();
     if (Idle.state.screen === "stats") return this.combatStats();
     if (Idle.state.screen === "bestiary") return this.bestiary();
@@ -5314,6 +5399,9 @@ Idle.ui = {
     this.root.querySelectorAll("[data-fletch]").forEach((el) => {
       el.addEventListener("click", () => this.selectFletch(el.dataset.fletch));
     });
+    this.root.querySelectorAll("[data-slayer]").forEach((el) => {
+      el.addEventListener("click", () => this.startSlayer(el.dataset.slayer));
+    });
     this.root.querySelectorAll("[data-thieve]").forEach((el) => {
       el.addEventListener("click", () => this.startThieve(el.dataset.thieve));
     });
@@ -5343,6 +5431,7 @@ Idle.ui = {
           this.render();
         }
         if (action === "open-mining") this.setScreen("mining");
+        if (action === "open-slayerprof") this.setScreen("slayer");
         if (action === "open-smithing") this.setScreen("smithing");
         if (action === "open-anvil") this.setScreen("anvil");
         if (action === "open-cooking") this.setScreen("cooking");
@@ -5361,7 +5450,8 @@ Idle.ui = {
     if (action === "talk-gem_trader") this.setScreen("gemtrader");
     if (action === "talk-monk_cain") this.setScreen("cain");
     if (action === "talk-monk_hotei") this.setScreen("hotei");
-    if (action === "buy-cain") this.buyCain(el.dataset.item);
+    if (action === "talk-slayer_maniac") { Idle.state.screen = "slayer_maniac"; this.render(); }
+    if (action === "buy-slayer-task") this.buySlayerTask();
     if (action === "kinetic") this.kineticGrab(el.dataset.item);
     if (action === "buy-gem") this.buyGem(el.dataset.item);
     if (action === "sell-gem") this.sellGem(el.dataset.item);
@@ -5397,7 +5487,8 @@ Idle.ui = {
         }
         if (action === "add-cart") {
           const input = this.root.querySelector(`[data-qty="${el.dataset.item}"]`);
-          Idle.systems.exchange.addOrder(Idle.state, el.dataset.item, Number(input && input.value) || 1);
+          const error = Idle.systems.exchange.addOrder(Idle.state, el.dataset.item, Number(input && input.value) || 1);
+          if (error) Idle.state.pushLog({ kind: "full", text: error });
           Idle.systems.save.write(Idle.state);
           this.render();
         }

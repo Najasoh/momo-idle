@@ -27,6 +27,7 @@ Idle.state = {
     fletching: Idle.professions.fletching.createSkill(),
     herblore: Idle.professions.herblore.createSkill(),
     hunter: Idle.professions.hunter.createSkill(),
+    slayer: Idle.professions.slayer.createSkill(),
     thieving: Idle.professions.thieving.createSkill(),
     agility: Idle.professions.agility.createSkill(),
     slayer: { level: 1, xp: 0, xpToNext: Idle.config.baseXpToLevel },
@@ -118,7 +119,15 @@ Idle.boot = function boot() {
   }
   if (!Idle.state.skills.fishing) Idle.state.skills.fishing = Idle.professions.fishing.createSkill();
   if (!Idle.state.skills.crafting) Idle.state.skills.crafting = Idle.professions.crafting.createSkill();
-  if (!Idle.state.skills.slayer) Idle.state.skills.slayer = { level: 1, xp: 0, xpToNext: Idle.config.baseXpToLevel };
+  if (!Idle.state.skills.slayer) Idle.state.skills.slayer = Idle.professions.slayer.createSkill();
+  if (saved.skills && saved.skills.slayer) {
+    Idle.state.skills.slayer = {
+      level: saved.skills.slayer.level || 1,
+      xp: saved.skills.slayer.xp || 0,
+      xpToNext: Idle.config.baseXpToLevel,
+    };
+    Idle.systems.xp.sync(Idle.state.skills.slayer);
+  }
   if (!Idle.state.skills.farming) Idle.state.skills.farming = Idle.professions.farming.createSkill();
   if (!Idle.state.skills.fletching) Idle.state.skills.fletching = Idle.professions.fletching.createSkill();
   if (!Idle.state.skills.thieving) Idle.state.skills.thieving = Idle.professions.thieving.createSkill();
@@ -147,7 +156,8 @@ Idle.boot = function boot() {
     };
     Idle.systems.xp.sync(Idle.state.skills.agility);
   }
-  if (!Idle.state.hops) Idle.state.hops = { crop: null, plantedAt: 0 };
+  if (!Idle.state.slayerTask) Idle.state.slayerTask = null;
+  if (saved.slayerTask) Idle.state.slayerTask = saved.slayerTask;
   if (!Idle.state.seenMobs) Idle.state.seenMobs = {};
   if (!Idle.state.bank) Idle.state.bank = [];
   if (Array.isArray(saved.bank)) Idle.state.bank = saved.bank;
