@@ -3936,6 +3936,7 @@ Idle.ui = {
         ${task ? `<p class="hint">Current task: ${task.need - task.left} / ${task.need} ${task.name}</p>` : `<p class="hint">No active task.</p>`}
         <div class="bubbles">
           <button class="bubble" data-action="buy-slayer-task" ${task ? "disabled" : ""}>Slayer Task Level 1 · 100 coins</button>
+          <button class="bubble" data-action="buy-slayer-cap">Apprentice's slayer cap · 25000 coins + 6 slayer coins</button>
         </div>
       </section>
     `;
@@ -3958,6 +3959,25 @@ Idle.ui = {
     const need = 10 + Math.floor(Math.random() * 6);
     Idle.state.slayerTask = { id: pick.id, name: mob ? mob.name : pick.id, need, left: need };
     Idle.state.pushLog({ kind: "pick", text: `Slayer task: kill ${need} ${mob ? mob.name : pick.id}.` });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  buySlayerCap() {
+    if (Idle.systems.inventory.count(Idle.state.slots, "coins") < 25000) {
+      Idle.state.pushLog({ kind: "full", text: "Need 25000 coins." });
+      this.render();
+      return;
+    }
+    if (Idle.systems.inventory.count(Idle.state.slots, "slayer_coin") < 6) {
+      Idle.state.pushLog({ kind: "full", text: "Need 6 slayer coins." });
+      this.render();
+      return;
+    }
+    if (!this.takeCoins(25000)) return;
+    Idle.systems.inventory.removeQty(Idle.state.slots, "slayer_coin", 6);
+    Idle.systems.inventory.add(Idle.state.slots, "apprentice_slayer_cap", 1);
+    Idle.state.pushLog({ kind: "pick", text: "Bought Apprentice's slayer cap." });
     Idle.systems.save.write(Idle.state);
     this.render();
   },
@@ -5452,6 +5472,7 @@ Idle.ui = {
     if (action === "talk-monk_hotei") this.setScreen("hotei");
     if (action === "talk-slayer_maniac") { Idle.state.screen = "slayer_maniac"; this.render(); }
     if (action === "buy-slayer-task") this.buySlayerTask();
+    if (action === "buy-slayer-cap") this.buySlayerCap();
     if (action === "kinetic") this.kineticGrab(el.dataset.item);
     if (action === "buy-gem") this.buyGem(el.dataset.item);
     if (action === "sell-gem") this.sellGem(el.dataset.item);

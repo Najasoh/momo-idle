@@ -80,6 +80,7 @@ Idle.data.weaponStats = {
   staff_of_fire: { speed: 3.6, attack: "crush", styles: ["accurate", "aggressive", "defensive"], bonuses: { crush: 9, magic: 10, dstab: 2, dslash: 3, dcrush: 1, magicDefence: 10, strength: 6 } },
   amulet_of_accuracy: { speed: 0, attack: "crush", styles: [], bonuses: { stab: 4, slash: 4, crush: 4, magic: 4, range: 4 } },
   slayertrackerscharm: { speed: 0, attack: "crush", styles: [], bonuses: { prayer: 1 } },
+  apprentice_slayer_cap: { speed: 0, attack: "crush", styles: [], bonuses: { dstab: 2, dslash: 2, dcrush: 2, magicDefence: -2 } },
   mooleta: { speed: 0, attack: "crush", styles: [], bonuses: { stab: 5, slash: 7, crush: 7, magic: -1, range: -1, dstab: 4, dslash: 8, dcrush: 8, magicDefence: -2, drange: -1, strength: 1 } },
     cow_slippers: { speed: 0, attack: "crush", styles: [], bonuses: { dstab: 4, dslash: 4, dcrush: 4, drange: 3, magicDefence: 2, hitpoints: 5, farming: 2 } },
     iron_dagger: { speed: 2.4, attack: "stab", styles: ["accurate", "aggressive", "defensive"], bonuses: { stab: 5, slash: 3, crush: -4, magic: 1, magicDefence: 1, strength: 4 } },
