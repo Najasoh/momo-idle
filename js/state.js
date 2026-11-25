@@ -156,7 +156,12 @@ Idle.boot = function boot() {
     };
     Idle.systems.xp.sync(Idle.state.skills.agility);
   }
-  if (!Idle.state.slayerTask) Idle.state.slayerTask = null;
+  if (Idle.state.prayerPoints === undefined) Idle.state.prayerPoints = Idle.state.combatSkills.prayer.level;
+  if (!Idle.state.prayers) Idle.state.prayers = [];
+  if (saved.prayerPoints !== undefined) Idle.state.prayerPoints = saved.prayerPoints;
+  if (!Idle.state.slayerTasksDone) Idle.state.slayerTasksDone = 0;
+  if (Idle.state.wandUses === undefined) Idle.state.wandUses = 5;
+  if (saved.wandUses) Idle.state.wandUses = saved.wandUses;
   if (saved.slayerTask) Idle.state.slayerTask = saved.slayerTask;
   if (!Idle.state.seenMobs) Idle.state.seenMobs = {};
   if (!Idle.state.bank) Idle.state.bank = [];

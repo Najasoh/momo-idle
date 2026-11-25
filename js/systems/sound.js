@@ -7,7 +7,8 @@ Idle.systems.sound = {
   active: [],
 
   play(name, loop) {
-    const audio = new Audio(`sounds/${name}.wav`);
+    const file = /\.(wav|ogg|mp3)$/i.test(name) ? name : `${name}.wav`;
+    const audio = new Audio(`sounds/${file}`);
     audio.loop = Boolean(loop);
     audio.volume = this.volume;
     this.active.push(audio);

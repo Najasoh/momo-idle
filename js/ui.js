@@ -44,6 +44,7 @@ Idle.ui = {
       this.paintAmbience(now);
       this.syncGeSound();
       this.syncWalkSound();
+      this.drainPrayers(now);
       if (Idle.state.bury) return;
       if (Idle.state.fight || Idle.state.leave || Idle.state.exit || Idle.state.altar || Idle.state.questRun || (Idle.state.activity && Idle.state.activity.phase === "travel") || (Idle.state.grave && (Idle.state.grave.phase === "walk" || Idle.state.grave.phase === "home"))) return;
       if (Idle.state.activity && Idle.state.activity.profession === "discover") {
@@ -390,6 +391,7 @@ Idle.ui = {
       Idle.state.slayerTask.left -= 1;
       if (Idle.state.slayerTask.left <= 0) {
         Idle.systems.inventory.add(Idle.state.slots, "slayer_coin", 1);
+        Idle.state.slayerTasksDone = (Idle.state.slayerTasksDone || 0) + 1;
         Idle.state.pushLog({ kind: "level", text: `Slayer task complete. +1 slayer coin.` });
         Idle.state.slayerTask = null;
       } else {
@@ -595,6 +597,15 @@ Idle.ui = {
     const job = Idle.state.activity;
     const current = node || (job ? Idle.professions[job.profession].nodeById(job.id) : null);
     if (!current) return Idle.config.tickMs;
+    if (job && job.profession === "hunter") {
+      const trap = Idle.professions.hunter.nodeById(job.id);
+      if (trap && trap.seconds) {
+        if (!this.catchMs) this.catchMs = (trap.seconds[0] + Math.random() * (trap.seconds[1] - trap.seconds[0])) * 1000;
+        return this.catchMs;
+      }
+      if (!this.catchMs) this.catchMs = Idle.professions.hunter.catchSeconds() * 1000;
+      return this.catchMs;
+    }
     if (job && job.profession === "fishing") {
       const fish = Idle.professions.fishing.available(Idle.state.skills.fishing, current);
       const seconds = fish.length ? Idle.professions.fishing.catchSeconds(fish[fish.length - 1]) : 3;
@@ -663,10 +674,10 @@ Idle.ui = {
   },
 
   shownSkill() {
-    const map = { fishing: "fishing", cooking: "cooking", smithing: "smithing", anvil: "smithing", crafting: "crafting", woodcutting: "woodcutting", thieving: "thieving", agility: "agility", farming: "farming", fletching: "fletching", runecrafting: "runecrafting" };
+    const map = { fishing: "fishing", cooking: "cooking", smithing: "smithing", anvil: "smithing", crafting: "crafting", woodcutting: "woodcutting", thieving: "thieving", agility: "agility", farming: "farming", fletching: "fletching", runecrafting: "runecrafting", hunter: "hunter", herblore: "herblore" };
     if (map[Idle.state.screen]) {
       const profession = map[Idle.state.screen];
-      const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching", runecrafting: "Runecrafting" };
+      const names = { mining: "Mining", smithing: "Smithing", cooking: "Cooking", fishing: "Fishing", crafting: "Crafting", woodcutting: "Woodcutting", thieving: "Thieving", agility: "Agility", farming: "Farming", fletching: "Fletching", runecrafting: "Runecrafting", hunter: "Hunter", herblore: "Herblore" };
       const skill = Idle.state.skills[profession];
       return { name: names[profession], level: skill.level, pct: Math.floor((skill.xp / skill.xpToNext) * 100) };
     }
@@ -1324,13 +1335,21 @@ Idle.ui = {
   gutBird() {
     const index = Idle.state.selectedSlot;
     const slot = Idle.state.slots[index];
-    if (!slot || slot.id !== "crimson_swift") return;
-    Idle.systems.inventory.removeQty(Idle.state.slots, "crimson_swift", 1);
-    Idle.systems.inventory.add(Idle.state.slots, "bones", 1);
-    Idle.systems.inventory.add(Idle.state.slots, "raw_bird_meat", 1);
-    const feathers = 5 + Math.floor(Math.random() * 6);
-    Idle.systems.inventory.add(Idle.state.slots, "feather", feathers);
-    Idle.state.pushLog({ kind: "pick", text: `Gutted crimson swift. ${feathers} feathers.` });
+    if (!slot) return;
+    if (slot.id === "crimson_swift") {
+      Idle.systems.inventory.removeQty(Idle.state.slots, "crimson_swift", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "bones", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "raw_bird_meat", 1);
+      const feathers = 5 + Math.floor(Math.random() * 6);
+      Idle.systems.inventory.add(Idle.state.slots, "feather", feathers);
+      Idle.state.pushLog({ kind: "pick", text: `Gutted crimson swift. ${feathers} feathers.` });
+    } else if (slot.id === "uni_horn_bear") {
+      Idle.systems.inventory.removeQty(Idle.state.slots, "uni_horn_bear", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "bones", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "uni_horn_bear_fur", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "raw_beast_meat", 1);
+      Idle.state.pushLog({ kind: "pick", text: "Gutted uni-horn bear. Bones, fur, raw beast meat." });
+    } else return;
     Idle.systems.save.write(Idle.state);
     this.render();
   },
@@ -1498,8 +1517,12 @@ Idle.ui = {
     Idle.state.activity = null;
     Idle.state.running = false;
     this.syncActivitySound();
+    if (this.burySound) {
+      this.burySound.pause();
+      this.burySound = null;
+    }
     Idle.state.bury = { index: Idle.state.selectedSlot, startedAt: performance.now(), name: item.name };
-    this.burySound = Idle.systems.sound.play("bury", true);
+    this.burySound = Idle.systems.sound.play("bury", false);
     Idle.state.pushLog({ kind: "pick", text: `Burying ${item.name}.` });
     this.render();
   },
@@ -1800,7 +1823,7 @@ Idle.ui = {
         <div class="wheel">
           ${traps.map((trap) => {
             const active = Idle.state.activity && Idle.state.activity.profession === "hunter" && Idle.state.activity.id === trap.id;
-            return `<button class="node wheel-item ${active ? "active" : ""}" data-action="select-hunter" data-item="${trap.id}"><span class="node-name">${trap.name}</span><span class="node-stat">Bird snare</span></button>`;
+            return `<button class="node wheel-item ${active ? "active" : ""}" data-action="select-hunter" data-item="${trap.id}"><span class="node-name">${trap.name}</span><span class="node-stat">Hunter ${trap.level} · ${trap.tool.replaceAll("_", " ")}</span></button>`;
           }).join("")}
         </div>
       </section>
@@ -2032,13 +2055,13 @@ Idle.ui = {
         { id: "accurate", name: "Accurate" },
         { id: "flicker", name: "Flicker" },
       ];
-      return `<div class="metal-tabs style-tabs"><button class="tab on" data-action="spell-menu">Spell</button><button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button>${styles.map((s) => `<button class="tab ${castStyle === s.id ? "on" : ""}" data-action="cast-style" data-cast="${s.id}">${s.name}</button>`).join("")}</div>${this.spellMenu()}`;
+      return `<div class="metal-tabs style-tabs"><button class="tab on" data-action="spell-menu">Spell</button><button class="tab" data-action="prayer-menu">Prayer</button><button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button>${styles.map((s) => `<button class="tab ${castStyle === s.id ? "on" : ""}" data-action="cast-style" data-cast="${s.id}">${s.name}</button>`).join("")}</div>${this.spellMenu()}`;
     }
     const weapon = Idle.systems.combat.weapon();
     const styles = weapon ? weapon.styles : ["accurate", "aggressive", "defensive"];
     const names = weapon && weapon.styleNames ? weapon.styleNames : styles;
     const attacks = weapon && weapon.styleNames ? ["slash", "slash", "stab", "slash"] : [Idle.systems.combat.attackName()];
-    return `<div class="metal-tabs style-tabs"><button class="tab" data-action="spell-menu">Spell</button><button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button>${styles.map((name, i) => `<button class="tab ${Idle.state.style === name ? "on" : ""}" data-style="${name}">${names[i] || name} · ${attacks[i] || attacks[0]}; ${name}</button>`).join("")}</div>`;
+    return `<div class="metal-tabs style-tabs"><button class="tab" data-action="spell-menu">Spell</button><button class="tab" data-action="prayer-menu">Prayer</button><button class="tab" data-action="flee" ${Idle.state.fleeUntil && Date.now() < Idle.state.fleeUntil ? "disabled" : ""}>Flee</button>${styles.map((name, i) => `<button class="tab ${Idle.state.style === name ? "on" : ""}" data-style="${name}">${names[i] || name} · ${attacks[i] || attacks[0]}; ${name}</button>`).join("")}</div>${this.prayerMenu()}`;
   },
 
   spellMenu() {
@@ -2071,6 +2094,95 @@ Idle.ui = {
       Idle.state.fight.playerSwings = 0;
     }
     this.render();
+  },
+
+  prayerMenu() {
+    if (!this.prayerOpen) return "";
+    const points = Idle.state.prayerPoints || 0;
+    const max = this.maxPrayer();
+    const active = Idle.state.prayers || [];
+    return `<div class="bubbles">
+      ${Idle.data.prayers.filter((prayer) => Idle.state.combatSkills.prayer.level >= prayer.level).map((prayer) => {
+        const have = Idle.state.combatSkills.prayer.level >= prayer.level;
+        const on = active.includes(prayer.id);
+        return `<button class="pill" data-action="toggle-prayer" data-prayer="${prayer.id}" data-item="${prayer.id}" title="${prayer.tip}" style="color:${on ? "#3ab84a" : "#888"}" ${have ? "" : "disabled"}>${prayer.name}</button>`;
+      }).join("")}
+    </div>`;
+  },
+
+  togglePrayer(id) {
+    const prayer = Idle.data.prayers.find((p) => p.id === id);
+    if (!prayer) return;
+    if (Idle.state.combatSkills.prayer.level < prayer.level) return;
+    Idle.state.prayers = Idle.state.prayers || [];
+    const index = Idle.state.prayers.indexOf(id);
+    if (index >= 0) {
+      Idle.state.prayers.splice(index, 1);
+    } else {
+      if ((Idle.state.prayerPoints || 0) < 1) {
+        Idle.state.pushLog({ kind: "full", text: "Not enough prayer points." });
+        this.render();
+        return;
+      }
+      Idle.state.prayers.push(id);
+      if (prayer.sound) Idle.systems.sound.play(prayer.sound, false);
+    }
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  drainPrayers(now) {
+    if (!Idle.state.prayers || !Idle.state.prayers.length) return;
+    if (Idle.state.prayerPoints === undefined) Idle.state.prayerPoints = this.maxPrayer();
+    if (!this.prayerDrainAt) this.prayerDrainAt = now;
+    const elapsed = (now - this.prayerDrainAt) / 1000;
+    const drain = Idle.state.prayers.reduce((sum, id) => {
+      const prayer = Idle.data.prayers.find((p) => p.id === id);
+      return sum + (prayer ? 1 / prayer.drain : 0);
+    }, 0);
+    const cost = elapsed * drain;
+    if (cost < 1) return;
+    const take = Math.floor(cost);
+    Idle.state.prayerPoints = Math.max(0, (Idle.state.prayerPoints || 0) - take);
+    this.prayerDrainAt = now - ((cost - take) / drain) * 1000;
+    if (Idle.state.prayerPoints <= 0) {
+      Idle.state.prayers = [];
+      Idle.state.pushLog({ kind: "full", text: "Prayer drained." });
+    }
+    if (this.root) {
+      this.root.querySelectorAll("[data-prayer-label]").forEach((el) => { el.textContent = `${Idle.state.prayerPoints}/${this.maxPrayer()} prayer`; });
+      this.root.querySelectorAll("[data-prayer-fill]").forEach((bar) => { bar.style.width = `${Math.max(0, (Idle.state.prayerPoints / this.maxPrayer()) * 100)}%`; });
+    }
+  },
+
+  prayerLines() {
+    const active = Idle.state.prayers || [];
+    if (!active.length) return "";
+    const lines = active.map((id) => {
+      const prayer = Idle.data.prayers.find((p) => p.id === id);
+      return prayer ? prayer.tip : "";
+    }).filter(Boolean);
+    return `<p class="kicker">Active prayers</p><p>${lines.join(" · ")}</p>`;
+  },
+
+  effectLines() {
+    const lines = Object.values(Idle.state.equipment || {}).flatMap((id) => {
+      const stats = id && Idle.data.weaponStats[id];
+      return stats && stats.effects ? stats.effects : [];
+    });
+    if (!lines.length) return "";
+    return `<p class="kicker">Effects</p><p>${lines.join(" · ")}</p>`;
+  },
+
+  prayerBonus(stat) {
+    const active = Idle.state.prayers || [];
+    return active.reduce((sum, id) => {
+      const prayer = Idle.data.prayers.find((p) => p.id === id);
+      if (!prayer) return sum;
+      if (prayer.effect === stat) return sum + prayer.amount;
+      if (prayer.effect === "ranged" && (stat === "ranged" || stat === "rangedStrength")) return sum + prayer.amount;
+      return sum;
+    }, 0);
   },
 
   combatBars(mob) {
@@ -2130,12 +2242,17 @@ Idle.ui = {
     const hpMax = Idle.state.combatSkills.hitpoints.level;
     const hpNow = Idle.state.fight ? Idle.state.fight.playerHp : (Idle.state.hp || hpMax);
     const hpPct = Math.max(0, Math.min(100, (hpNow / hpMax) * 100));
+    const prayMax = this.maxPrayer();
+    const prayNow = Idle.state.prayerPoints === undefined ? prayMax : Idle.state.prayerPoints;
+    const prayPct = Math.max(0, Math.min(100, (prayNow / prayMax) * 100));
     return `
       <header class="topbar">
         <div class="topbar-row">
           <div class="hp-bar-wrap">
             <div class="bar hp-track"><span data-hp-fill style="width:${hpPct}%"></span></div>
             <span data-hp-label>${hpNow} / ${hpMax} hp</span>
+            <div class="bar hp-track"><span data-prayer-fill style="width:${prayPct}%;background:#8a5ac4"></span></div>
+            <span data-prayer-label>${prayNow} / ${prayMax} prayer</span>
           </div>
           <div class="status">
             <span class="pill" data-xp-label>${skill.multi ? skill.multi.map((s) => `${s.name} ${s.level}`).join(" | ") : `${skill.name} ${skill.level}`}</span>
@@ -3937,6 +4054,10 @@ Idle.ui = {
         <div class="bubbles">
           <button class="bubble" data-action="buy-slayer-task" ${task ? "disabled" : ""}>Slayer Task Level 1 · 100 coins</button>
           <button class="bubble" data-action="buy-slayer-cap">Apprentice's slayer cap · 25000 coins + 6 slayer coins</button>
+          ${(Idle.state.slayerTasksDone || 0) > 0 ? `<button class="bubble" data-action="buy-slayer-scimitar">Trainee slayer scimitar · 5000 coins</button>` : ""}
+          <button class="bubble" data-action="buy-slayer-hood">Trainee slayer hood · 3000 coins</button>
+          <button class="bubble" data-action="buy-slayer-jerkin">Trainee slayer jerkin · 4000 coins</button>
+          <button class="bubble" data-action="buy-slayer-buckler">Trainee slayer buckler · 3000 coins</button>
         </div>
       </section>
     `;
@@ -3978,6 +4099,18 @@ Idle.ui = {
     Idle.systems.inventory.removeQty(Idle.state.slots, "slayer_coin", 6);
     Idle.systems.inventory.add(Idle.state.slots, "apprentice_slayer_cap", 1);
     Idle.state.pushLog({ kind: "pick", text: "Bought Apprentice's slayer cap." });
+    Idle.systems.save.write(Idle.state);
+    this.render();
+  },
+
+  buySlayerGear(id, price, name) {
+    if (!this.takeCoins(price)) {
+      Idle.state.pushLog({ kind: "full", text: "Not enough coins." });
+      this.render();
+      return;
+    }
+    Idle.systems.inventory.add(Idle.state.slots, id, 1);
+    Idle.state.pushLog({ kind: "pick", text: `Bought ${name}.` });
     Idle.systems.save.write(Idle.state);
     this.render();
   },
@@ -4272,7 +4405,7 @@ Idle.ui = {
   combatStats() {
     const skills = Idle.state.combatSkills;
     const names = ["attack", "strength", "defence", "ranged", "magic", "prayer", "hitpoints"];
-    const professions = ["mining", "smithing", "cooking", "fishing", "crafting", "fletching", "sailing", "woodcutting", "slayer", "firemaking", "farming", "thieving", "agility", "runecrafting"];
+    const professions = ["mining", "smithing", "cooking", "fishing", "crafting", "fletching", "sailing", "woodcutting", "slayer", "firemaking", "farming", "thieving", "agility", "runecrafting", "herblore", "hunter"];
     return `
       <section class="panel">
         <div class="screen-head">
@@ -4291,7 +4424,7 @@ Idle.ui = {
           <div>
             <p class="kicker">Professions</p>
             <div class="stat-bubbles">${professions.map((name) => {
-              const skill = Idle.state.skills[name];
+              const skill = Idle.state.skills[name] || { level: 1 };
               return `<span class="pill">${name} ${skill.level}</span>`;
             }).join("")}</div>
             <div class="stat-bubbles"><span class="pill">Quest points ${Idle.state.questPoints || 0}</span></div>
@@ -5183,6 +5316,8 @@ Idle.ui = {
         <p class="kicker">Other bonuses</p>
         <p>Melee str: ${sign(bonus.strength)} · Ranged str: ${sign(bonus.rangedStrength)}</p>
         <p>Magic dmg: ${bonus.magicDamage}% · Prayer: ${sign(bonus.prayer)}</p>
+        ${this.prayerLines()}
+        ${this.effectLines()}
         <p class="kicker">Target-specific</p>
         <p>Undead: ${bonus.undead}% · Slayer: ${bonus.slayer}%</p>
         <p class="kicker">Weapon speed</p>
@@ -5394,7 +5529,7 @@ Idle.ui = {
             <button class="btn" data-action="open-treasure" ${item && item.id === "one_eyed_hectors_treasure" ? "" : "hidden"}>Open</button>
             <button class="btn destroy-btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
             <button class="btn clean-btn" data-action="clean" ${item && /grimy/i.test(item.name) ? "" : "hidden"}>Clean</button>
-            <button class="btn gut-btn" data-action="gut" ${item && item.id === "crimson_swift" ? "" : "hidden"}>Gut</button>
+            <button class="btn gut-btn" data-action="gut" ${item && (item.id === "crimson_swift" || item.id === "white_cinderella_bovine" || item.id === "barbecue_pig" || item.id === "feathered_friday_monkey" || item.id === "hallowtail_bat" || item.id === "uni_horn_bear") ? "" : "hidden"}>Gut</button>
             <button class="btn" data-action="deposit" ${item && Idle.state.screen === "bank" ? "" : "hidden"}>Deposit</button>
             <button class="btn" data-action="open-combine">Combine</button>
           </div>
@@ -5473,6 +5608,10 @@ Idle.ui = {
     if (action === "talk-slayer_maniac") { Idle.state.screen = "slayer_maniac"; this.render(); }
     if (action === "buy-slayer-task") this.buySlayerTask();
     if (action === "buy-slayer-cap") this.buySlayerCap();
+    if (action === "buy-slayer-scimitar") this.buySlayerGear("trainee_slayer_scimitar", 5000, "Trainee slayer scimitar");
+    if (action === "buy-slayer-hood") this.buySlayerGear("trainee_slayer_hood", 3000, "Trainee slayer hood");
+    if (action === "buy-slayer-jerkin") this.buySlayerGear("trainee_slayer_jerkin", 4000, "Trainee slayer jerkin");
+    if (action === "buy-slayer-buckler") this.buySlayerGear("trainee_slayer_buckler", 3000, "Trainee slayer buckler");
     if (action === "kinetic") this.kineticGrab(el.dataset.item);
     if (action === "buy-gem") this.buyGem(el.dataset.item);
     if (action === "sell-gem") this.sellGem(el.dataset.item);
@@ -5633,6 +5772,7 @@ Idle.ui = {
         if (action === "flee") this.flee();
         if (action === "spell-menu") {
           this.spellOpen = !this.spellOpen;
+          this.prayerOpen = false;
           if (!this.spellOpen) {
             Idle.state.spell = null;
             if (Idle.state.fight) {
@@ -5642,7 +5782,12 @@ Idle.ui = {
           }
           this.render();
         }
-        if (action === "select-spell") this.selectSpell(el.dataset.spell);
+        if (action === "prayer-menu") {
+          this.prayerOpen = !this.prayerOpen;
+          this.spellOpen = false;
+          this.render();
+        }
+        if (action === "toggle-prayer") this.togglePrayer(el.dataset.prayer);
         if (action === "cast-style") this.setCastStyle(el.dataset.cast);
         if (action === "open-spellbook") this.setScreen("spellbook");
         if (action === "cast-home") this.castHome();
@@ -5861,7 +6006,16 @@ Idle.ui = {
     if (item.desc) lines.push(item.desc);
     if (Idle.data.altarFish[id]) lines.push(`Altar ${Idle.data.altarFish[id].prayer} Prayer · ${Idle.data.altarFish[id].seconds}s`);
     if (item.equip) lines.push(`Worn: ${item.equip}${item.hands === 2 ? " · two-handed" : ""}`);
-    if (item.heat) lines.push(`Heat def: ${item.heat}`);
+    if (item.req) {
+      const reqs = Object.entries(item.req).map(([skill, level]) => `${skill} ${level}`).join(", ");
+      lines.push(`Requires: ${reqs}`);
+    }
+    if (id === "slayertrackerscharm") {
+      const task = Idle.state.slayerTask;
+      if (task) lines.push(`Task: ${task.need - task.left} / ${task.need} ${task.name}`);
+      else lines.push("No active slayer task.");
+    }
+    if (id === "noose_wand") lines.push(`Uses left: ${Idle.state.wandUses || 5}`);
     if (weapon) {
       if (weapon.speed) lines.push(`${weapon.attack || ""} · ${weapon.speed}s${weapon.styles && weapon.styles.length ? ` · ${weapon.styles.join(", ")}` : ""}`.trim());
       if (weapon.bonuses) {
@@ -5875,6 +6029,7 @@ Idle.ui = {
           if (b[key] !== undefined && b[key] !== 0) lines.push(`${label}: ${b[key]}`);
         });
       }
+      if (weapon.effects) weapon.effects.forEach((effect) => lines.push(effect));
     }
     box.innerHTML = `<img src="images/${id}.png" alt="">${lines.map((line) => `<p>${line}</p>`).join("")}`;
     const boxH = 220;

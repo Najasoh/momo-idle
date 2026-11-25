@@ -110,6 +110,14 @@ Idle.systems.combat = {
     return Math.floor(0.5 + (effective * (bonus + 64)) / 640);
   },
 
+  slayerAccuracy() {
+    const fight = Idle.state.fight;
+    if (!fight || !Idle.state.slayerTask || Idle.state.slayerTask.id !== fight.mob) return 1;
+    const weaponId = Idle.state.equipment.weapon;
+    const stats = weaponId && Idle.data.weaponStats[weaponId];
+    return stats && stats.slayerAccuracy ? 1 + stats.slayerAccuracy : 1;
+  },
+
   hitChance(attackRoll, defenceRoll) {
     if (attackRoll > defenceRoll) return 1 - (defenceRoll + 2) / (2 * (attackRoll + 1));
     return attackRoll / (2 * (defenceRoll + 1));
@@ -166,17 +174,17 @@ Idle.systems.combat = {
       return { damage: this.roll(max, this.hitChance(attackRoll, defenceRoll)), max };
     }
     if (attackType === "ranged" || attackType === "range") {
-      const effectiveRanged = skills.ranged.level + this.styleBonus("ranged") + 8;
+      const effectiveRanged = skills.ranged.level * (1 + Idle.ui.prayerBonus("ranged")) + this.styleBonus("ranged") + 8;
       const attackRoll = effectiveRanged * (this.gearBonus("ratk") + 64);
       const defenceRoll = (mob.defence + 8) * ((mob.rdef || 0) + 64);
-      const max = this.maxHit(skills.ranged.level, this.gearBonus("rangedStrength"), "ranged");
+      const max = this.maxHit(skills.ranged.level * (1 + Idle.ui.prayerBonus("rangedStrength")), this.gearBonus("rangedStrength"), "ranged");
       return { damage: this.roll(max, this.hitChance(attackRoll, defenceRoll)), max };
     }
-    const effectiveAttack = skills.attack.level + this.styleBonus("attack") + 8;
-    const attackRoll = effectiveAttack * (this.gearBonus(attackType) + 64);
+    const effectiveAttack = skills.attack.level * (1 + Idle.ui.prayerBonus("attack")) + this.styleBonus("attack") + 8;
+    const attackRoll = effectiveAttack * (this.gearBonus(attackType) + 64) * this.slayerAccuracy();
     const effectiveDefence = mob.defence + 8;
     const defenceRoll = effectiveDefence * ((mob.meleeDefence[attackType] || 0) + 64);
-    const max = this.maxHit(skills.strength.level, this.gearBonus("strength"), "strength");
+    const max = this.maxHit(skills.strength.level * (1 + Idle.ui.prayerBonus("strength")), this.gearBonus("strength"), "strength");
     return { damage: this.roll(max, this.hitChance(attackRoll, defenceRoll)), max };
   },
 
@@ -184,7 +192,7 @@ Idle.systems.combat = {
     const skills = Idle.state.combatSkills;
     const effectiveAttack = mob.attack + 8;
     const attackRoll = effectiveAttack * ((mob.aggressive[mob.style] || 0) + 64);
-    const effectiveDefence = skills.defence.level + this.styleBonus("defence") + 8;
+    const effectiveDefence = skills.defence.level * (1 + Idle.ui.prayerBonus("defence")) + this.styleBonus("defence") + 8;
     const defenceRoll = effectiveDefence * (this.gearBonus(mob.style) + 64);
     const max = Math.floor(0.5 + ((mob.strength + 8) * (((mob.aggressive.strength || 0) + 64)) ) / 640);
     return { damage: this.roll(max, this.hitChance(attackRoll, defenceRoll)), max };
