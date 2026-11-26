@@ -81,6 +81,8 @@ Idle.professions.hunter = {
     } else if (trap.chance) {
       chance = skill.level >= trap.chance[2] ? trap.chance[1] : trap.chance[0];
     }
+    if (trap.id === "magma_rat" && state.equipment && state.equipment.boots === "magma_rat_boots") chance = Math.min(1, chance + 0.03);
+    if (trap.tool === "noose_wand" && state.equipment && state.equipment.cape === "cocoala_cocoa_cape") chance = Math.min(1, chance + 0.02);
     if (Math.random() > chance) {
       if (trap.failHurt) {
         if (tool === "noose_wand") {
@@ -91,7 +93,8 @@ Idle.professions.hunter = {
           }
         }
         state.hp = Math.max(0, (state.hp || 10) - trap.failHurt);
-        return { kind: "ok", text: `Missed. Took ${trap.failHurt} crush damage.` };
+        if (trap.failSound && Idle.systems.sound) Idle.systems.sound.play(trap.failSound, false);
+        return { kind: "ok", text: `Missed. Took ${trap.failHurt} damage.` };
       }
       return { kind: "ok", text: "Trap missed." };
     }

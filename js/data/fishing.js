@@ -16,6 +16,7 @@ const fish = (id, name, level, xp, sell, swatch) => ({ id, name, level, xp, sell
 
 Idle.data.fishingFish = [
   fish("raw_shrimp", "Raw shrimp", 1, 10, 26, "#e07a6a"),
+  fish("raw_awabi_snail", "Raw awabi snail", 5, 8, 19, "#c4a27a"),
   fish("raw_crayfish", "Raw crayfish", 1, 10, 15, "#d07a62"),
   fish("raw_sardine", "Raw sardine", 5, 20, 27, "#b7c4ce"),
   fish("raw_guppy", "Raw guppy", 7, 12, 0, "#7d9a6a"),
@@ -44,7 +45,7 @@ Idle.data.fishingSpots = [
     name: "Small fishing net",
     tool: "small_fishing_net",
     area: "shore",
-    fish: ["raw_shrimp", "raw_guppy", "raw_anchovies"],
+    fish: ["raw_shrimp", "raw_guppy", "raw_anchovies", "raw_awabi_snail"],
   },
   {
     id: "cave_net",

@@ -113,4 +113,17 @@ Idle.data.smithingBars = [
     cost: { runite: 1, coal: 8 },
     blurb: "1 runite ore and 8 coal.",
   },
+  {
+    id: "magma_rat_boots",
+    name: "Magma rat boots",
+    level: 20,
+    xp: 25,
+    sell: 250,
+    respawn: 2.4,
+    fail: 0,
+    swatch: "#c45a2a",
+    cost: { magma_rat_fur: 3, magma_rat_tail: 1, coins: 500 },
+    blurb: "3 fur, 1 tail, 500 coins.",
+    hunterReq: 9,
+  },
 ];

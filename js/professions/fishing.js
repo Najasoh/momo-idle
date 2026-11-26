@@ -69,12 +69,19 @@ Idle.professions.fishing = {
     const fishingSounds = ["fishing1", "fishing2", "fishing3", "fishing4"];
     Idle.systems.sound.play(fishingSounds[Math.floor(Math.random() * fishingSounds.length)], false);
     if (spot.consume) Idle.systems.inventory.removeQty(state.slots, spot.consume, 1);
-    if (!Idle.systems.inventory.add(state.slots, fish.id, 1)) {
+    if (fish.id === "raw_awabi_snail") {
+      const t = Math.max(0, Math.min(1, (skill.level - 5) / 94));
+      const chance = 0.44 + t * (0.99 - 0.44);
+      if (Math.random() > chance) return { kind: "ok", text: "The snail got away." };
+    }
+    let qty = 1;
+    if (fish.id === "raw_awabi_snail") qty = 1 + Math.min(21, Math.floor(skill.level / 5));
+    if (!Idle.systems.inventory.add(state.slots, fish.id, qty)) {
       state.activity = null;
       return { kind: "full", text: "Inventory is full. Fishing stopped." };
     }
     const levels = Idle.systems.xp.grant(skill, fish.xp);
-    let text = `Caught ${fish.name} (+${fish.xp} xp).`;
+    let text = `Caught ${qty > 1 ? qty + " " : ""}${fish.name} (+${fish.xp} xp).`;
     if (levels > 0) text += ` Fishing is now level ${skill.level}.`;
     return { kind: levels > 0 ? "level" : "mine", text };
   },

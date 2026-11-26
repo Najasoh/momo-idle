@@ -50,4 +50,22 @@ Idle.data.hunterTraps = [
       { id: "raw_beast_meat", qty: 1 },
     ],
   },
+  { id: "magma_rat", name: "Magma rat", level: 9, xp: 61, tool: "bird_snare", sell: 0,
+    scale: [9, 0.43, 55, 0.99],
+    drops: [
+      { id: "bones", qty: 1 },
+      { id: "raw_beast_meat", qty: 1 },
+      { id: "magma_rat_tail", qty: 1 },
+      { id: "magma_rat_fur", qty: 1, chance: 0.5 },
+    ],
+  },
+  { id: "cocoala", name: "Cocoala", level: 11, xp: 64, tool: "noose_wand", failHurt: 11, failSound: "cocoalahit", sell: 0,
+    scale: [11, 0.43, 58, 1],
+    drops: [
+      { id: "bones", qty: 2 },
+      { id: "raw_beast_meat", qty: 1 },
+      { id: "cocoala_fur", qty: 1, chance: 0.5 },
+      { id: "cocoala_cocoa_seed", qty: 1, chance: 0.5 },
+    ],
+  },
 ];

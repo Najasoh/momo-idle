@@ -1283,7 +1283,7 @@ Idle.ui = {
     const skill = Idle.state.skills.crafting;
     const station = this.craftStation || "spinning_wheel";
     const pct = Math.max(0, Math.min(100, (skill.xp / skill.xpToNext) * 100));
-    const recipes = Idle.data.craftingRecipes.filter((recipe) => recipe.station === station);
+    const recipes = Idle.data.craftingRecipes.filter((recipe) => recipe.station === station && (!recipe.hunterReq || (Idle.state.skills.hunter && Idle.state.skills.hunter.level >= recipe.hunterReq)));
     const fromYard = Idle.state.place === "lumberyard";
     const stations = fromYard ? Idle.data.craftingStations.filter((s) => s.id === "sawmill") : Idle.data.craftingStations;
     return `
@@ -1349,6 +1349,20 @@ Idle.ui = {
       Idle.systems.inventory.add(Idle.state.slots, "uni_horn_bear_fur", 1);
       Idle.systems.inventory.add(Idle.state.slots, "raw_beast_meat", 1);
       Idle.state.pushLog({ kind: "pick", text: "Gutted uni-horn bear. Bones, fur, raw beast meat." });
+    } else if (slot.id === "magma_rat") {
+      Idle.systems.inventory.removeQty(Idle.state.slots, "magma_rat", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "bones", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "raw_beast_meat", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "magma_rat_tail", 1);
+      if (Math.random() < 0.5) Idle.systems.inventory.add(Idle.state.slots, "magma_rat_fur", 1);
+      Idle.state.pushLog({ kind: "pick", text: "Gutted magma rat." });
+    } else if (slot.id === "cocoala") {
+      Idle.systems.inventory.removeQty(Idle.state.slots, "cocoala", 1);
+      Idle.systems.inventory.add(Idle.state.slots, "bones", 2);
+      Idle.systems.inventory.add(Idle.state.slots, "raw_beast_meat", 1);
+      if (Math.random() < 0.5) Idle.systems.inventory.add(Idle.state.slots, "cocoala_fur", 1);
+      if (Math.random() < 0.5) Idle.systems.inventory.add(Idle.state.slots, "cocoala_cocoa_seed", 1);
+      Idle.state.pushLog({ kind: "pick", text: "Gutted cocoala." });
     } else return;
     Idle.systems.save.write(Idle.state);
     this.render();
@@ -5529,7 +5543,7 @@ Idle.ui = {
             <button class="btn" data-action="open-treasure" ${item && item.id === "one_eyed_hectors_treasure" ? "" : "hidden"}>Open</button>
             <button class="btn destroy-btn" data-action="destroy" ${item ? "" : "hidden"}>Destroy</button>
             <button class="btn clean-btn" data-action="clean" ${item && /grimy/i.test(item.name) ? "" : "hidden"}>Clean</button>
-            <button class="btn gut-btn" data-action="gut" ${item && (item.id === "crimson_swift" || item.id === "white_cinderella_bovine" || item.id === "barbecue_pig" || item.id === "feathered_friday_monkey" || item.id === "hallowtail_bat" || item.id === "uni_horn_bear") ? "" : "hidden"}>Gut</button>
+            <button class="btn gut-btn" data-action="gut" ${item && (item.id === "crimson_swift" || item.id === "white_cinderella_bovine" || item.id === "barbecue_pig" || item.id === "feathered_friday_monkey" || item.id === "hallowtail_bat" || item.id === "uni_horn_bear" || item.id === "magma_rat" || item.id === "cocoala") ? "" : "hidden"}>Gut</button>
             <button class="btn" data-action="deposit" ${item && Idle.state.screen === "bank" ? "" : "hidden"}>Deposit</button>
             <button class="btn" data-action="open-combine">Combine</button>
           </div>

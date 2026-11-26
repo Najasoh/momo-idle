@@ -11,6 +11,7 @@ Idle.data.craftingStations = [
     { id: "chisel", name: "Chisel", note: "use your chisel" },
     { id: "glassblowing", name: "Glassblowing Pipe", note: "" },
     { id: "kiln", name: "Kiln", note: "" },
+    { id: "pestle", name: "Pestle and mortar", note: "Grind" },
 ];
 
 Idle.data.craftingItems = [
@@ -110,6 +111,8 @@ Idle.data.craftingRecipes = [
   { id: "hallowtail_bat_ear_muffs", station: "needle", name: "Hallowtail bat ear muffs", level: 9, xp: 20, seconds: 1.8, cost: { hallowtail_bat_wing: 2 }, sell: 1500, swatch: "#5a4a6a", equip: "helm" },
   { id: "uni_horn_camo_top", station: "needle", name: "Uni-horn bear camo top", level: 46, xp: 30, seconds: 1.8, cost: { uni_horn_bear_fur: 2, coins: 40 }, sell: 2624, swatch: "#d0c8b8", equip: "body" },
   { id: "uni_horn_camo_legs", station: "needle", name: "Uni-horn bear camo legs", level: 46, xp: 30, seconds: 1.8, cost: { uni_horn_bear_fur: 2, coins: 40 }, sell: 1914, swatch: "#d0c8b8", equip: "legs" },
+  { id: "cocoala_cocoa_cape", station: "needle", name: "Cocoala cocoa cape", level: 15, xp: 25, seconds: 1.8, cost: { cocoala_fur: 2, cocoala_cocoa_seed: 3, coins: 50 }, sell: 850, swatch: "#6a4a2a", equip: "cape", hunterReq: 11 },
+  { id: "awabi_paste", station: "pestle", name: "Awabi paste", level: 1, xp: 5, seconds: 1.2, cost: { raw_awabi_snail: 1 }, sell: 15, swatch: "#c4a27a" },
   { id: "plank", station: "sawmill", name: "Plank", level: 1, xp: 0, seconds: 1.6, cost: { logs: 1 }, coins: 100, sell: 115, swatch: "#c4a886" },
   { id: "oak_plank", station: "sawmill", name: "Oak plank", level: 1, xp: 0, seconds: 1.6, cost: { oak_logs: 1 }, coins: 250, sell: 410, swatch: "#a8886a" },
   { id: "teak_plank", station: "sawmill", name: "Teak plank", level: 1, xp: 0, seconds: 1.6, cost: { teak_logs: 1 }, coins: 500, sell: 700, swatch: "#8a6a3b" },

@@ -6,6 +6,10 @@ Idle.data.cookingItems = [
   { id: "cooked_meat", name: "Cooked meat", sell: 61, heal: 3, swatch: "#8a4b32" },
   { id: "burnt_meat", name: "Burnt meat", sell: 1, swatch: "#3a3532" },
   { id: "cooked_shrimp", name: "Cooked shrimp", sell: 30, heal: 3, swatch: "#d07a62" },
+  { id: "cooked_awabi_snail", name: "Cooked awabi snail", sell: 15, heal: 3, swatch: "#c4a27a" },
+  { id: "burnt_awabi_snail", name: "Burnt awabi snail", sell: 1, swatch: "#4a3a2a" },
+  { id: "awabi_paste", name: "Awabi paste", sell: 15, swatch: "#c4a27a" },
+  { id: "raw_awabi_snail", name: "Raw awabi snail", sell: 19, swatch: "#c4a27a" },
   { id: "cooked_crayfish", name: "Cooked crayfish", sell: 5, heal: 2, swatch: "#c45a3a" },
   { id: "burnt_crayfish", name: "Burnt crayfish", sell: 0, swatch: "#3a3532" },
   { id: "burnt_shrimp", name: "Burnt shrimp", sell: 0, swatch: "#3a3532" },
@@ -59,6 +63,7 @@ function food(id, name, level, xp, heal, sell, seconds, raw) {
 Idle.data.cookingRecipes = [
   { id: "cooked_meat", name: "Cooked meat", level: 1, xp: 30, heal: 3, sell: 61, respawn: 2.4, burn: 0.4, stopBurn: 35, burnt: "burnt_meat", swatch: "#8a4b32", alternatives: ["raw_beef", "raw_bear_meat", "raw_boar_meat", "raw_rat_meat", "raw_yak_meat", "raw_impaler_meat"], blurb: "Heals 3.", },
   food("cooked_shrimp", "Cooked shrimp", 1, 30, 3, 30, 2.4, "raw_shrimp"),
+  food("cooked_awabi_snail", "Cooked awabi snail", 3, 20, 3, 15, 1.8, "raw_awabi_snail"),
   food("cooked_crayfish", "Cooked crayfish", 1, 10, 2, 5, 2, "raw_crayfish"),
   food("cooked_chicken", "Cooked chicken", 1, 30, 3, 63, 1.6, "raw_chicken"),
   food("cooked_anchovies", "Cooked anchovies", 1, 30, 1, 34, 2.4, "raw_anchovies"),
